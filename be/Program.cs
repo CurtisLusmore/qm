@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.FileProviders;
+using qm.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,9 @@ builder.Services.AddCors(opts =>
             .WithHeaders("Content-Type");
     });
 });
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<SearchService>();
 
 var app = builder.Build();
 

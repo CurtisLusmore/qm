@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using qm.Dtos;
+using qm.Services;
 
 namespace qm.Controllers;
 
@@ -9,15 +10,8 @@ namespace qm.Controllers;
 [ApiController]
 [Route("api/search")]
 [Produces("application/json")]
-public class SearchController : ControllerBase
+public class SearchController(SearchService service) : ControllerBase
 {
-    private readonly TorrentSearchResult[] searchResults = new TorrentSearchResult[]
-    {
-        new TorrentSearchResult(
-            "0123456789abcdef", "Torrent name",
-            10, 2_000, 2),
-    };
-
     /// <summary>
     /// Search for torrents
     /// </summary>
@@ -26,8 +20,9 @@ public class SearchController : ControllerBase
     /// <response code="200">Search results</response>
     [HttpGet("")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TorrentSearchResult))]
-    public Task<IActionResult> SearchTorrentsAsync([FromQuery] string? terms)
+    public async Task<IActionResult> SearchTorrentsAsync([FromQuery] string? terms)
     {
-        return Task.FromResult<IActionResult>(Ok(searchResults));
+        var results = await service.SearchAsync(terms);
+        return Ok(results);
     }
 }
