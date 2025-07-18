@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.FileProviders;
+using MonoTorrent;
 using qm.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,8 +25,11 @@ builder.Services.AddCors(opts =>
     });
 });
 
+builder.Services.Configure<TorrentServiceConfig>(builder.Configuration.GetSection(TorrentServiceConfig.SectionName));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<SearchService>();
+builder.Services.AddSingleton<TorrentService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TorrentService>());
 
 var app = builder.Build();
 

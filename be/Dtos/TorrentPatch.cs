@@ -6,5 +6,5 @@ namespace qm.Dtos;
 /// <param name="State">The new state</param>
 /// <param name="Files">File patches</param>
 public record TorrentPatch(
-    State? State,
+    PatchState? State,
     TorrentFilePatch[]? Files);

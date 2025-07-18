@@ -10,10 +10,10 @@ namespace qm.Dtos;
 public enum Priority
 {
     /// <summary>
-    /// Do not download
+    /// Skip
     /// </summary>
-    [EnumMember(Value = "Do Not Download")]
-    DoNotDownload,
+    [EnumMember(Value = "Skip")]
+    Skip,
 
     /// <summary>
     /// Normal

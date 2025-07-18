@@ -1,13 +1,18 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
   searchTorrents,
   getTorrents,
+  removeTorrent,
+  saveTorrent,
+  updateTorrent,
   type Torrent,
   type TorrentSearchResult,
+  type State,
 } from './Client';
 
 const loadTorrents = (function () {
@@ -38,17 +43,21 @@ export default function App() {
 };
 
 function SearchForm() {
+  const [ terms, setTerms ] = useState('');
   const [ loading, setLoading ] = useState(false);
   const [ results, setResults ] = useState([] as TorrentSearchResult[]);
 
-  const handleSearchInput = (function () {
+  const handleSearchInput = useMemo(function () {
     let handle: number | undefined = undefined;
     return async function handleSearchInput(event: React.FormEvent<HTMLInputElement>): Promise<void> {
+      const terms = (event.target as HTMLInputElement).value
+      setTerms(terms);
+
       clearTimeout(handle);
       handle = setTimeout(async function () {
         setLoading(true);
         try {
-          const results = await searchTorrents((event.target as HTMLInputElement).value);
+          const results = await searchTorrents(terms);
           setResults(results || []);
         }
         finally {
@@ -56,11 +65,19 @@ function SearchForm() {
         }
       }, 200);
     };
-  }());
+  }, []);
+
+  const createClickHandler = function (infoHash: string): React.MouseEventHandler {
+    return async function (): Promise<void> {
+      setTerms('');
+      setResults([]);
+      await saveTorrent(infoHash);
+    };
+  };
 
   return <>
     <form>
-      <input type="search" onInput={handleSearchInput} />
+      <input type="search" onInput={handleSearchInput} value={terms} />
     </form>
     {
       loading
@@ -79,7 +96,11 @@ function SearchForm() {
   </>;
 
   function Row(result: TorrentSearchResult): React.ReactNode {
-    return <tr key={result.infoHash}>
+    return <tr
+        key={result.infoHash}
+        onClick={createClickHandler(result.infoHash)}
+        style={{ cursor: 'pointer' }}
+      >
       <td>{result.sizeBytes}</td>
       <td>{result.seeders}</td>
       <td>{result.name}</td>
@@ -96,6 +117,18 @@ function TorrentList() {
     });
   }, []);
 
+  const createRemoveClickHandler = function (infoHash: string) {
+    return async function (): Promise<void> {
+      await removeTorrent(infoHash);
+    };
+  };
+
+  const createStateClickHandler = function (infoHash: string, state: State) {
+    return async function (): Promise<void> {
+      await updateTorrent(infoHash, { state });
+    };
+  };
+
   return <table>
     <thead>
       <tr>
@@ -103,6 +136,7 @@ function TorrentList() {
         <th>Seeders</th>
         <th>Name</th>
         <th>State</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>{ torrents.map(Row) }</tbody>
@@ -114,6 +148,11 @@ function TorrentList() {
       <td>{torrent.seeders}</td>
       <td>{torrent.name}</td>
       <td>{torrent.state}</td>
+      <td>
+        <button onClick={createRemoveClickHandler(torrent.infoHash)}>Remove</button>
+        <button onClick={createStateClickHandler(torrent.infoHash, 'Paused')}>Pause</button>
+        <button onClick={createStateClickHandler(torrent.infoHash, 'Downloading')}>Resume</button>
+      </td>
     </tr>;
   };
 };

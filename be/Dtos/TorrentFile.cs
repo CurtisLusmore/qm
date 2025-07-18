@@ -13,4 +13,25 @@ public record TorrentFile(
     long DownloadedBytes,
     long SizeBytes,
     decimal ProgressPercent,
-    Priority Priority);
+    Priority Priority)
+{
+    /// <summary>
+    /// A file of a saved torrent
+    /// </summary>
+    /// <param name="Path">The path</param>
+    /// <param name="DownloadedBytes">The amount downloaded in bytes</param>
+    /// <param name="SizeBytes">The size in bytes</param>
+    /// <param name="Priority">The priority</param>
+    public TorrentFile(
+        string Path,
+        long DownloadedBytes,
+        long SizeBytes,
+        Priority Priority) : this(
+            Path,
+            DownloadedBytes,
+            SizeBytes,
+            SizeBytes == 0 ? 0 : ((decimal)DownloadedBytes) / SizeBytes,
+            Priority)
+    {
+    }
+}

@@ -29,8 +29,8 @@ export interface TorrentSearchResult {
 };
 
 export interface TorrentPatch {
-  state: State | null;
-  files: TorrentFilePatch[] | null;
+  state?: State;
+  files?: TorrentFilePatch[];
 };
 
 export interface TorrentFilePatch {
@@ -88,5 +88,5 @@ export async function removeTorrent(infoHash: string): Promise<void> {
 };
 
 export async function updateTorrent(infoHash: string, patch: TorrentPatch): Promise<void> {
-  await api.patch(`${baseUrl}api/torrents/${infoHash}`, patch);
+  await api.patch(`api/torrents/${infoHash}`, patch);
 };
