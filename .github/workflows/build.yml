@@ -1,0 +1,104 @@
+name: Build and publish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create GitHub release
+      run: |
+        gh release create "${{ github.run_number }}" \
+          --title "${{ github.run_number }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build front-end project
+      run: npm run build --prefix fe
+
+
+    - name: Publish back-end project for Windows x86
+      run: |
+        dotnet publish be --runtime win-x86
+        zip -j win-x86.zip be/bin/Release/net8.0/win-x86/qm.exe
+        gh release upload "${{ github.run_number }}" win-x86.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish back-end project for Windows x64
+      run: |
+        dotnet publish be --runtime win-x64
+        zip -j win-x64.zip be/bin/Release/net8.0/win-x64/qm.exe
+        gh release upload "${{ github.run_number }}" win-x64.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish back-end project for Windows ARM64
+      run: |
+        dotnet publish be --runtime win-arm64
+        zip -j win-arm64.zip be/bin/Release/net8.0/win-arm64/qm.exe
+        gh release upload "${{ github.run_number }}" win-arm64.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Publish back-end project for macOS x64
+      run: |
+        dotnet publish be --runtime osx-x64
+        tar -czvf osx-x64.tar.gz -C be/bin/Release/net8.0/osx-x64/publish qm
+        gh release upload "${{ github.run_number }}" osx-x64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish back-end project for macOS ARM64
+      run: |
+        dotnet publish be --runtime osx-arm64
+        tar -czvf osx-arm64.tar.gz -C be/bin/Release/net8.0/osx-arm64/publish/qm
+        gh release upload "${{ github.run_number }}" osx-arm64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Publish back-end project for Linux x64
+      run: |
+        dotnet publish be --runtime linux-x64
+        tar -czvf linux-x64.tar.gz -C be/bin/Release/net8.0/linux-x64/publish/qm
+        gh release upload "${{ github.run_number }}" linux-x64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish back-end project for Linux ARM
+      run: |
+        dotnet publish be --runtime linux-arm
+        tar -czvf linux-arm.tar.gz -C be/bin/Release/net8.0/linux-arm/publish/qm
+        gh release upload "${{ github.run_number }}" linux-arm.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish back-end project for Linux ARM64
+      run: |
+        dotnet publish be --runtime linux-arm64
+        tar -czvf linux-arm64.tar.gz -C be/bin/Release/net8.0/linux-arm64/publish/qm
+        gh release upload "${{ github.run_number }}" linux-arm64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
