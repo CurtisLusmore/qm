@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
             .SetMinimumLevel(LogLevel.Information)
             .AddFilter("Microsoft.AspNetCore", LogLevel.Warning)
             .AddFilter("Microsoft.Hosting", LogLevel.Warning)
+            .AddFilter("System.Net", LogLevel.Warning)
             .AddConsole(opts => opts.FormatterName = nameof(MinimalConsoleFormatter));
         builder.Services.AddSingleton<ConsoleFormatter, MinimalConsoleFormatter>();
         return builder;
