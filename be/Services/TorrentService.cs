@@ -268,9 +268,10 @@ public class TorrentService(
     {
         try
         {
+            var newPath = Path.Join(CompletedDirectory, torrent.Name);
             await torrent.StopAsync();
-            await torrent.MoveFilesAsync(CompletedDirectory, true);
-            logger.LogInformation("Moved files to \"{path}\"", CompletedDirectory);
+            await torrent.MoveFilesAsync(newPath, true);
+            logger.LogInformation("Moved files to \"{path}\"", newPath);
             await engine!.RemoveAsync(torrent);
             torrents.Remove(infoHash);
 
