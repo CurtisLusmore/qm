@@ -49,7 +49,7 @@ public record Torrent(
             Seeders,
             DownloadedBytes,
             SizeBytes,
-            SizeBytes == 0 ? 0 : ((decimal)DownloadedBytes) / SizeBytes,
+            SizeBytes == 0 ? 0 : 100.0m * DownloadedBytes / SizeBytes,
             NumFiles,
             Files)
     {

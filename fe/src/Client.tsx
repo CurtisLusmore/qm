@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:5232/';
+const baseUrl = 'http://localhost:8080/';
 
 export interface Torrent {
   infoHash: string;
@@ -39,7 +39,7 @@ export interface TorrentFilePatch {
 };
 
 export type State = 'Stopped' | 'Hashing' | 'Downloading' | 'Paused' | 'Error';
-export type Priority = 'Do Not Download' | 'Normal' | 'High';
+export type Priority = 'Skip' | 'Normal' | 'High';
 
 const api = {
   request(path: string, method: string, payload: any | null): Promise<any> {

@@ -37,7 +37,7 @@ public class TorrentService(
     /// </summary>
     /// <returns>The saved torrents</returns>
     public IEnumerable<Dtos.Torrent> GetTorrents()
-        => torrents.Select(kv => Convert(kv.Key, kv.Value));
+        => torrents.Select(kv => Convert(kv.Key, kv.Value)).OrderByDescending(torrent => torrent.ProgressPercent).ToArray();
 
     /// <summary>
     /// Get a saved torrent
@@ -122,7 +122,7 @@ public class TorrentService(
             }.ToSettings());
 
         // Initialize torrents
-        logger.LogInformation("Initializing torrents from {directory}", MetadataDirectory);
+        logger.LogInformation("Initializing torrents from \"{path}\"", MetadataDirectory);
         Directory.CreateDirectory(MetadataDirectory);
         var files = Directory.GetFiles(MetadataDirectory, "*.torrent");
         await Task.WhenAll(files.Select(async file =>
@@ -180,7 +180,7 @@ public class TorrentService(
             var manager = await engine!.AddAsync(magnetLink, InProgressDirectory);
             await manager.StartAsync();
             torrents[infoHash] = manager;
-            logger.LogInformation("Downloading {infoHash} to {directory}", infoHash, InProgressDirectory);
+            logger.LogInformation("Downloading {infoHash} to \"{path}\"", infoHash, InProgressDirectory);
             return manager;
         }
         catch (Exception ex)
@@ -200,7 +200,7 @@ public class TorrentService(
             foreach (var file in torrent.Files)
             {
                 File.Delete(file.FullPath);
-                logger.LogInformation("Deleted {path}", file.FullPath);
+                logger.LogInformation("Deleted \"{path}\"", file.FullPath);
 
                 var directory = Path.GetDirectoryName(file.FullPath)!;
                 if (directory != InProgressDirectory)
@@ -214,17 +214,17 @@ public class TorrentService(
             foreach (var directory in directories)
             {
                 Directory.Delete(directory);
-                logger.LogInformation("Deleted {path}", directory);
+                logger.LogInformation("Deleted \"{path}\"", directory);
             }
 
             var torrentFile = Path.Join(MetadataDirectory, $"{infoHash}.torrent");
             File.Delete(torrentFile);
-            logger.LogInformation("Deleted {path}", torrentFile);
+            logger.LogInformation("Deleted \"{path}\"", torrentFile);
 
             await engine!.RemoveAsync(torrent);
             torrents.Remove(infoHash);
 
-            logger.LogInformation("Removed torrent {infoHash}", infoHash);
+            logger.LogInformation("Removed torrent {name} ({infoHash})", torrent.Name, infoHash);
         }
         catch (Exception ex)
         {
@@ -241,9 +241,11 @@ public class TorrentService(
             {
                 case PatchState.Downloading:
                     await torrent.StartAsync();
+                    logger.LogInformation("Resuming torrent {name} ({infoHash})", torrent.Name, infoHash);
                     break;
                 case PatchState.Paused:
                     await torrent.PauseAsync();
+                    logger.LogInformation("Pausing torrent {name} ({infoHash})", torrent.Name, infoHash);
                     break;
             }
 
@@ -252,9 +254,8 @@ public class TorrentService(
                 await torrent.SetFilePriorityAsync(
                     torrent.Files.Single(torrentFile => torrentFile.Path == file.Path),
                     Convert(file.Priority));
+                logger.LogInformation("Setting priority to {priority} for \"{path}\" of torrent {name} ({infoHash})", file.Priority, file.Path, torrent.Name, infoHash);
             }
-
-            logger.LogInformation("Updated torrent {infoHash}", infoHash);
         }
         catch (Exception ex)
         {
@@ -265,9 +266,21 @@ public class TorrentService(
 
     private async Task CompleteTorrentAsync(string infoHash, TorrentManager torrent)
     {
-        await torrent.StopAsync();
-        await torrent.MoveFilesAsync(CompletedDirectory, true);
-        torrents.Remove(infoHash);
+        try
+        {
+            await torrent.StopAsync();
+            await torrent.MoveFilesAsync(CompletedDirectory, true);
+            logger.LogInformation("Moved files to \"{path}\"", CompletedDirectory);
+            await engine!.RemoveAsync(torrent);
+            torrents.Remove(infoHash);
+
+            logger.LogInformation("Completed torrent {name} ({infoHash})", torrent.Name, infoHash);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred completing {infoHash}: {reason}", infoHash, ex.Message);
+            throw;
+        }
     }
 
     private static Dtos.Torrent Convert(string infoHash, TorrentManager torrent)
@@ -279,7 +292,7 @@ public class TorrentService(
             torrent.Files.Sum(ITorrentFileInfoExtensions.BytesDownloaded),
             torrent.Torrent?.Size ?? 0,
             torrent.Files.Count,
-            torrent.Files.Select(Convert).ToArray());
+            torrent.Files.Select(Convert).OrderBy(file => file.Path).ToArray());
 
     private static Dtos.TorrentFile Convert(ITorrentManagerFile file)
         => new Dtos.TorrentFile(
