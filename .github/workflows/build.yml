@@ -1,0 +1,167 @@
+name: Build and publish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build front-end project
+      run: npm run build --prefix fe
+
+
+    - name: Publish back-end project for Windows x86
+      run: |
+        dotnet publish be --runtime win-x86
+        zip win-x86.zip be/bin/Release/net8.0/win-x86/qm.exe
+
+    - name: Publish back-end project for Windows x64
+      run: |
+        dotnet publish be --runtime win-x64
+        zip win-x64.zip be/bin/Release/net8.0/win-x64/qm.exe
+
+    - name: Publish back-end project for Windows ARM64
+      run: |
+        dotnet publish be --runtime win-arm64
+        zip win-arm64.zip be/bin/Release/net8.0/win-arm64/qm.exe
+
+
+    - name: Publish back-end project for macOS x64
+      run: |
+        dotnet publish be --runtime osx-x64
+        tar -czvf osx-x64.tar.gz be/bin/Release/net8.0/osx-x64/publish/qm
+
+    - name: Publish back-end project for macOS ARM64
+      run: |
+        dotnet publish be --runtime osx-arm64
+        tar -czvf osx-arm64.tar.gz be/bin/Release/net8.0/osx-arm64/publish/qm
+
+
+    - name: Publish back-end project for Linux x64
+      run: |
+        dotnet publish be --runtime linux-x64
+        tar -czvf linux-x64.tar.gz be/bin/Release/net8.0/linux-x64/publish/qm
+
+    - name: Publish back-end project for Linux ARM
+      run: |
+        dotnet publish be --runtime linux-arm
+        tar -czvf linux-arm.tar.gz be/bin/Release/net8.0/linux-arm/publish/qm
+
+    - name: Publish back-end project for Linux ARM64
+      run: |
+        dotnet publish be --runtime linux-arm64
+        tar -czvf linux-arm64.tar.gz be/bin/Release/net8.0/linux-arm64/publish/qm
+
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ github.run_number }}
+        release_name: ${{ github.run_number }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Upload Release Asset for Windows x86
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: win-x86.zip
+        asset_name: win-x86.zip
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset for Windows x64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: win-x64.zip
+        asset_name: win-x64.zip
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset for Windows ARM64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: win-arm64.zip
+        asset_name: win-arm64.zip
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Upload Release Asset for macOS x64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: osx-x64.tar.gz
+        asset_name: osx-x64.tar.gz
+        asset_content_type: application/gzip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset for macOS x64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: osx-arm64.tar.gz
+        asset_name: osx-arm64.tar.gz
+        asset_content_type: application/gzip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Upload Release Asset for Linux x64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: linux-x64.tar.gz
+        asset_name: linux-x64.tar.gz
+        asset_content_type: application/gzip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset for Linux ARM
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: linux-arm.tar.gz
+        asset_name: linux-arm.tar.gz
+        asset_content_type: application/gzip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset for Linux ARM64
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: linux-arm64.tar.gz
+        asset_name: linux-arm64.tar.gz
+        asset_content_type: application/gzip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
