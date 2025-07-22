@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:8080/';
+const baseUrl = '';
 
 export interface Torrent {
   infoHash: string;
@@ -62,31 +62,31 @@ const api = {
 };
 
 export async function searchTorrents(search: string): Promise<TorrentSearchResult[]> {
-  const resp = await api.get(`api/search?terms=${encodeURI(search)}`);
+  const resp = await api.get(`/api/search?terms=${encodeURI(search)}`);
   const results = await resp.json() as TorrentSearchResult[];
   return results;
 };
 
 export async function getTorrents(): Promise<Torrent[]> {
-  const resp = await api.get('api/torrents');
+  const resp = await api.get('/api/torrents');
   const torrents = await resp.json() as Torrent[];
   return torrents;
 };
 
 export async function getTorrent(infoHash: string): Promise<Torrent> {
-  const resp = await api.get(`api/torrents/${infoHash}`);
+  const resp = await api.get(`/api/torrents/${infoHash}`);
   const torrent = await resp.json() as Torrent;
   return torrent;
 };
 
 export async function saveTorrent(infoHash: string): Promise<void> {
-  await api.post(`api/torrents/${infoHash}`);
+  await api.post(`/api/torrents/${infoHash}`);
 };
 
 export async function removeTorrent(infoHash: string): Promise<void> {
-  await api.delete(`api/torrents/${infoHash}`);
+  await api.delete(`/api/torrents/${infoHash}`);
 };
 
 export async function updateTorrent(infoHash: string, patch: TorrentPatch): Promise<void> {
-  await api.patch(`api/torrents/${infoHash}`, patch);
+  await api.patch(`/api/torrents/${infoHash}`, patch);
 };
