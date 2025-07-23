@@ -37,7 +37,9 @@ public class TorrentService(
     /// </summary>
     /// <returns>The saved torrents</returns>
     public IEnumerable<Dtos.Torrent> GetTorrents()
-        => torrents.Select(kv => Convert(kv.Key, kv.Value)).OrderByDescending(torrent => torrent.ProgressPercent).ToArray();
+        => torrents
+            .Select(kv => Dtos.Torrent.ConvertFrom(kv.Key, kv.Value))
+            .ToArray();
 
     /// <summary>
     /// Get a saved torrent
@@ -52,7 +54,7 @@ public class TorrentService(
             return null;
         }
 
-        var response = Convert(infoHash, torrent);
+        var response = Dtos.Torrent.ConvertFrom(infoHash, torrent);
         return response;
     }
 
@@ -141,10 +143,10 @@ public class TorrentService(
         // Monitor torrents
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
+            var torrentsArray = torrents.ToArray();
+            foreach (var kv in torrentsArray)
             {
-                var torrentsArray = torrents.ToArray();
-                foreach (var kv in torrentsArray)
+                try
                 {
                     var infoHash = kv.Key;
                     var torrent = kv.Value;
@@ -158,13 +160,15 @@ public class TorrentService(
                             await torrent.StopAsync();
                             await torrent.StartAsync();
                             break;
+                        case TorrentState.Stopped:
+                            continue;
                     }
                     if (progress == 100) await CompleteTorrentAsync(infoHash, torrent);
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error occurred while monitoring torrents: {reason}", ex.Message);
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred while monitoring torrent {infoHash}: {reason}", kv.Key, ex.Message);
+                }
             }
             await Task.Delay(1_000, stoppingToken);
         }
@@ -194,37 +198,28 @@ public class TorrentService(
     {
         try
         {
-            await torrent.StopAsync();
-
-            var directories = new HashSet<string>();
-            foreach (var file in torrent.Files)
+            if (torrent.State != TorrentState.Stopped)
             {
-                File.Delete(file.FullPath);
-                logger.LogInformation("Deleted \"{path}\"", file.FullPath);
+                await torrent.StopAsync();
 
-                var directory = Path.GetDirectoryName(file.FullPath)!;
-                if (directory != InProgressDirectory)
+                foreach (var file in torrent.Files)
                 {
-                    var relativePath = Path.GetRelativePath(InProgressDirectory, directory);
-                    var firstChild = Path.Join(InProgressDirectory, relativePath.Split(Path.DirectorySeparatorChar).First());
-                    directories.Add(firstChild);
+                    File.Delete(file.FullPath);
+                    logger.LogDebug("Deleted \"{path}\"", file.FullPath);
                 }
+
+                DeleteDirectories(torrent);
+
+                var torrentFile = Path.Join(MetadataDirectory, $"{infoHash}.torrent");
+                File.Delete(torrentFile);
+                logger.LogDebug("Deleted \"{path}\"", torrentFile);
+
+                await engine!.RemoveAsync(torrent);
             }
 
-            foreach (var directory in directories)
-            {
-                Directory.Delete(directory);
-                logger.LogInformation("Deleted \"{path}\"", directory);
-            }
-
-            var torrentFile = Path.Join(MetadataDirectory, $"{infoHash}.torrent");
-            File.Delete(torrentFile);
-            logger.LogInformation("Deleted \"{path}\"", torrentFile);
-
-            await engine!.RemoveAsync(torrent);
             torrents.Remove(infoHash);
 
-            logger.LogInformation("Removed torrent {name} ({infoHash})", torrent.Name, infoHash);
+            logger.LogInformation("Removed torrent \"{name} ({infoHash})", torrent.Name, infoHash);
         }
         catch (Exception ex)
         {
@@ -241,11 +236,11 @@ public class TorrentService(
             {
                 case PatchState.Downloading:
                     await torrent.StartAsync();
-                    logger.LogInformation("Resuming torrent {name} ({infoHash})", torrent.Name, infoHash);
+                    logger.LogInformation("Resuming torrent \"{name}\" ({infoHash})", torrent.Name, infoHash);
                     break;
                 case PatchState.Paused:
                     await torrent.PauseAsync();
-                    logger.LogInformation("Pausing torrent {name} ({infoHash})", torrent.Name, infoHash);
+                    logger.LogInformation("Pausing torrent \"{name}\" ({infoHash})", torrent.Name, infoHash);
                     break;
             }
 
@@ -254,7 +249,7 @@ public class TorrentService(
                 await torrent.SetFilePriorityAsync(
                     torrent.Files.Single(torrentFile => torrentFile.Path == file.Path),
                     Convert(file.Priority));
-                logger.LogInformation("Setting priority to {priority} for \"{path}\" of torrent {name} ({infoHash})", file.Priority, file.Path, torrent.Name, infoHash);
+                logger.LogInformation("Setting priority to {priority} for \"{path}\" of torrent \"{name}\" ({infoHash})", file.Priority, file.Path, torrent.Name, infoHash);
             }
         }
         catch (Exception ex)
@@ -271,11 +266,12 @@ public class TorrentService(
             var newPath = Path.Join(CompletedDirectory, torrent.Name);
             await torrent.StopAsync();
             await torrent.MoveFilesAsync(newPath, true);
-            logger.LogInformation("Moved files to \"{path}\"", newPath);
+            logger.LogDebug("Moved files to \"{path}\"", newPath);
+            DeleteUnwantedFiles(torrent);
+            DeleteDirectories(torrent);
             await engine!.RemoveAsync(torrent);
-            torrents.Remove(infoHash);
 
-            logger.LogInformation("Completed torrent {name} ({infoHash})", torrent.Name, infoHash);
+            logger.LogInformation("Completed torrent \"{name} ({infoHash})", torrent.Name, infoHash);
         }
         catch (Exception ex)
         {
@@ -284,51 +280,23 @@ public class TorrentService(
         }
     }
 
-    private static Dtos.Torrent Convert(string infoHash, TorrentManager torrent)
-        => new Dtos.Torrent(
-            infoHash,
-            torrent.Torrent?.Name ?? "Loading...",
-            Convert(torrent.State),
-            torrent.Peers.Seeds,
-            torrent.Files.Sum(ITorrentFileInfoExtensions.BytesDownloaded),
-            torrent.Torrent?.Size ?? 0,
-            torrent.Files.Count,
-            torrent.Files.Select(Convert).OrderBy(file => file.Path).ToArray());
-
-    private static Dtos.TorrentFile Convert(ITorrentManagerFile file)
-        => new Dtos.TorrentFile(
-            file.Path,
-            ITorrentFileInfoExtensions.BytesDownloaded(file),
-            file.Length,
-            Convert(file.Priority));
-
-    private static State Convert(TorrentState state) => state switch
+    private void DeleteUnwantedFiles(TorrentManager torrent)
     {
-        TorrentState.Stopped => State.Stopped,
-        TorrentState.Paused => State.Paused,
-        TorrentState.Starting => State.Hashing,
-        TorrentState.Downloading => State.Downloading,
-        TorrentState.Seeding => State.Stopped,
-        TorrentState.Hashing => State.Hashing,
-        TorrentState.HashingPaused => State.Paused,
-        TorrentState.Stopping => State.Stopped,
-        TorrentState.Error => State.Error,
-        TorrentState.Metadata => State.Hashing,
-        TorrentState.FetchingHashes => State.Hashing,
-        _ => throw new ArgumentOutOfRangeException(nameof(state)),
-    };
+        foreach (var file in torrent.Files)
+        {
+            if (file.Priority == MonoTorrent.Priority.DoNotDownload)
+            {
+                File.Delete(file.FullPath);
+                logger.LogDebug("Deleted unwanted file {path}", file.FullPath);
+            }
+        }
+    }
 
-    private static Dtos.Priority Convert(MonoTorrent.Priority priority) => priority switch
+    private void DeleteDirectories(TorrentManager torrent)
     {
-        MonoTorrent.Priority.DoNotDownload => Dtos.Priority.Skip,
-        MonoTorrent.Priority.Lowest => Dtos.Priority.Normal,
-        MonoTorrent.Priority.Low => Dtos.Priority.Normal,
-        MonoTorrent.Priority.Normal => Dtos.Priority.Normal,
-        MonoTorrent.Priority.High => Dtos.Priority.High,
-        MonoTorrent.Priority.Highest => Dtos.Priority.High,
-        MonoTorrent.Priority.Immediate => Dtos.Priority.High,
-        _ => throw new ArgumentOutOfRangeException(nameof(priority)),
-    };
+        var directory = Path.Join(InProgressDirectory, torrent.Name);
+        if (Directory.Exists(directory)) Directory.Delete(directory, true);
+    }
 
     private static MonoTorrent.Priority Convert(Dtos.Priority priority) => priority switch
     {

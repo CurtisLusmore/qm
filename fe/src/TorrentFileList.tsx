@@ -48,7 +48,11 @@ export default function TorrentFileList(): React.ReactElement {
     const listener = function (event: Event): void {
       const torrents = (event as CustomEvent).detail as Torrent[];
       const torrent = torrents.find(torrent => torrent.infoHash === infoHash);
-      setTorrent(torrent);
+      if (torrent !== undefined) {
+        setTorrent(torrent);
+      } else {
+        setInfoHash('');
+      }
     };
     window.addEventListener('torrents', listener);
     return () => window.removeEventListener('torrents', listener);
@@ -79,7 +83,9 @@ export default function TorrentFileList(): React.ReactElement {
           </TableRow>
         </TableHead>
         <TableBody>
-          {(torrent?.files || []).map(ListRow)}
+          {(torrent?.files.length ?? 0) > 0
+            ? torrent!.files.map(ListRow)
+            : <TableRow><TableCell align='center' colSpan={3}>Loading files...</TableCell></TableRow>}
         </TableBody>
       </Table>
     </DialogContent>
@@ -110,6 +116,7 @@ export default function TorrentFileList(): React.ReactElement {
 
     async function handlePriority(_: any, value: Priority): Promise<void> {
       await updateTorrent(infoHash, { files: [ { path: file.path, priority: value } ] });
+      window.dispatchEvent(new CustomEvent('refresh'));
     };
   };
 };

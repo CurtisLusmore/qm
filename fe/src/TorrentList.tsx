@@ -22,6 +22,8 @@ import {
   Tooltip,
 } from '@mui/material';
 import {
+  AddCircle,
+  Archive,
   Close,
   Delete,
   Downloading,
@@ -40,16 +42,25 @@ export default function TorrentList(): React.ReactElement {
   const [ torrents, setTorrents ] = useState([] as Torrent[]);
   const [ deleteTorrent, setDeleteTorrent ] = useState(undefined as Torrent | undefined);
 
-  useEffect(function () {
-    window.addEventListener('torrents', function (event : Event): void {
-      const torrents = (event as CustomEvent).detail as Torrent[];
+  useEffect(() => {
+    function handler(event : Event): void {
+      const torrents = ((event as CustomEvent).detail as Torrent[]);
+      torrents.sort((a, b) => a.name.localeCompare(b.name));
       setTorrents(torrents);
       setConnectionFailed(false);
       setLoading(false);
-    });
-    window.addEventListener('failed', () => {
+    }
+    window.addEventListener('torrents', handler);
+    return () => window.removeEventListener('torrents', handler);
+  }, []);
+
+  useEffect(() => {
+    function handler() {
       setConnectionFailed(true);
-    });
+      setLoading(false);
+    };
+    window.addEventListener('failed', handler);
+    return () => window.removeEventListener('failed', handler);
   }, []);
 
   return <><Table stickyHeader>
@@ -65,7 +76,7 @@ export default function TorrentList(): React.ReactElement {
       <TableBody>
         {loading && <TableRow><TableCell><Skeleton animation='pulse' /></TableCell><TableCell><Skeleton animation='pulse' /></TableCell><TableCell><Skeleton animation='pulse' /></TableCell><TableCell><Skeleton animation='pulse' /></TableCell><TableCell><Skeleton animation='pulse' /></TableCell></TableRow>}
         {!loading && connectionFailed && <TableRow><TableCell colSpan={5}><Alert severity='error'>Connection lost. Attempting to reconnect ...</Alert></TableCell></TableRow>}
-        {!loading && torrents.length === 0 && <TableRow><TableCell align='center' colSpan={5}>No saved torrents. Press the + button to search for a torrent</TableCell></TableRow>}
+        {!loading && torrents.length === 0 && <TableRow onClick={handleSearch} sx={{ cursor: 'pointer' }}><TableCell align='center' colSpan={5}>No saved torrents. Press here, or the <AddCircle fontSize='small' color='primary' sx={{ marginBottom: '-0.25em' }}/> button, to search for a torrent</TableCell></TableRow>}
         {!loading && torrents.map(ListRow)}
       </TableBody>
     </Table>
@@ -112,33 +123,39 @@ export default function TorrentList(): React.ReactElement {
 
   function Progress({ torrent }: { torrent: Torrent }): React.ReactElement {
     const variant = [ 'Stopped', 'Downloading', 'Paused' ].includes(torrent.state)
-      ? 'determinate'
+      ? 'buffer'
       : 'indeterminate';
     const color = torrent.state === 'Paused' ? 'warning' :
       torrent.state === 'Error' ? 'error' :
       torrent.state === 'Stopped' ? 'success' :
-        'primary';
+        'info';
 
-    return <Tooltip title={`${Util.FormatBytes(torrent.downloadedBytes)}/${Util.FormatBytes(torrent.sizeBytes)} (${Util.FormatPercent(torrent.progressPercent)})`}>
-      <LinearProgress color={color} variant={variant} value={torrent.progressPercent} />
+    return <Tooltip title={`${Util.FormatBytes(torrent.downloadedBytes)}/${Util.FormatBytes(torrent.targetBytes)} (${Util.FormatPercent(torrent.partialProgressPercent)})`}>
+      <LinearProgress color={color} variant={variant} value={torrent.progressPercent} valueBuffer={torrent.targetPercent} />
     </Tooltip>
   };
 
   function Actions({ torrent }: { torrent: Torrent }): React.ReactElement {
-    return <ButtonGroup variant='text'>
-      {
-        [ 'Paused', 'HashingPaused' ].includes(torrent.state)
-          ? <Tooltip title='Resume'>
-              <Button size='small' onClick={handlePause}><Downloading /></Button>
-            </Tooltip>
-          : <Tooltip title='Pause'>
-              <Button size='small' onClick={handlePause}><PauseCircle /></Button>
-            </Tooltip>
-      }
-      <Tooltip title='Delete'>
-        <Button size='small' onClick={handleDelete} color="error"><Delete /></Button>
-      </Tooltip>
-    </ButtonGroup>;
+    return torrent.state === 'Stopped'
+      ? <ButtonGroup variant='text'>
+          <Tooltip title='Archive'>
+            <Button size='small' onClick={handleArchive}><Archive /></Button>
+          </Tooltip>
+        </ButtonGroup>
+      : <ButtonGroup variant='text'>
+          {
+            [ 'Paused', 'HashingPaused' ].includes(torrent.state)
+              ? <Tooltip title='Resume'>
+                  <Button size='small' onClick={handlePause}><Downloading /></Button>
+                </Tooltip>
+              : <Tooltip title='Pause'>
+                  <Button size='small' onClick={handlePause}><PauseCircle /></Button>
+                </Tooltip>
+          }
+          <Tooltip title='Delete'>
+            <Button size='small' onClick={handleDelete} color='error'><Delete /></Button>
+          </Tooltip>
+        </ButtonGroup>;
 
     async function handlePause(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
       event.stopPropagation();
@@ -152,10 +169,19 @@ export default function TorrentList(): React.ReactElement {
       event.stopPropagation();
       setDeleteTorrent(torrent);
     };
+
+    async function handleArchive(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
+      event.stopPropagation();
+      await removeTorrent(torrent.infoHash);
+    };
   };
 
   async function handleDeleteTorrent(): Promise<void> {
     deleteTorrent && await removeTorrent(deleteTorrent.infoHash);
     setDeleteTorrent(undefined);
+  };
+
+  function handleSearch(): void {
+    window.dispatchEvent(new CustomEvent('search'));
   };
 };

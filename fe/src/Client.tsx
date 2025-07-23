@@ -6,7 +6,10 @@ export interface Torrent {
   state: State;
   seeders: number;
   downloadedBytes: number;
+  targetBytes: number;
   sizeBytes: number;
+  partialProgressPercent: number;
+  targetPercent: number;
   progressPercent: number;
   numFiles: number;
   files: TorrentFile[];

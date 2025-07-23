@@ -27,7 +27,7 @@ public class MinimalConsoleFormatter() : ConsoleFormatter(nameof(MinimalConsoleF
                     Console.Out.Write("trce: ");
                     break;
                 case LogLevel.Debug:
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.Out.Write("dbug: ");
                     break;
                 case LogLevel.Information:
