@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -37,6 +38,14 @@ export default function SearchForm(): React.ReactElement {
   const [ loading, setLoading ] = useState(false);
   const [ results, setResults ] = useState([] as TorrentSearchResult[]);
 
+  useEffect(() => {
+    function handler(): void {
+      setOpen(true);
+    };
+    window.addEventListener('search', handler);
+    return () => window.removeEventListener('search', handler);
+  }, []);
+
   const handleSearchInput = useMemo(function () {
     let handle: number | undefined = undefined;
     return async function handleSearchInput(event: React.FormEvent<HTMLInputElement>): Promise<void> {
@@ -64,6 +73,7 @@ export default function SearchForm(): React.ReactElement {
       maxWidth='lg'
       onClose={() => setOpen(false)}
       disableRestoreFocus
+      slotProps={{ paper: { sx: { height: '100vh' } } }}
     >
       <DialogTitle>Search</DialogTitle>
       <IconButton

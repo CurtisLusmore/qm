@@ -18,10 +18,9 @@ public static class ServiceCollectionExtensions
     public static WebApplicationBuilder AddLogging(this WebApplicationBuilder builder)
     {
         builder.Logging
-            .SetMinimumLevel(LogLevel.Information)
-            .AddFilter("Microsoft.AspNetCore", LogLevel.Warning)
-            .AddFilter("Microsoft.Hosting", LogLevel.Warning)
-            .AddFilter("System.Net", LogLevel.Warning)
+            .SetMinimumLevel(LogLevel.Debug)
+            .AddFilter("Microsoft", LogLevel.Warning)
+            .AddFilter("System", LogLevel.Warning)
             .AddConsole(opts => opts.FormatterName = nameof(MinimalConsoleFormatter));
         builder.Services.AddSingleton<ConsoleFormatter, MinimalConsoleFormatter>();
         return builder;

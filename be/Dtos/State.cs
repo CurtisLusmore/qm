@@ -16,10 +16,10 @@ public enum State
     Stopped,
 
     /// <summary>
-    /// Hashing
+    /// Initializing
     /// </summary>
-    [EnumMember(Value = "Hashing")]
-    Hashing,
+    [EnumMember(Value = "Initializing")]
+    Initializing,
 
     /// <summary>
     /// Downloading
