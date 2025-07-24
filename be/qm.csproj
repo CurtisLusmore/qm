@@ -5,14 +5,37 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>qm</ToolCommandName>
+    <PackageId>qm</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CurtisLusmore/qm</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/CurtisLusmore/qm</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Revision Condition="'$(Revision)' == ''">0</Revision>
+    <Version>1.0.0.$(Revision)</Version>
+    <Authors>Curtis Lusmore</Authors>
+    <Description>A tool for searching and downloading torrents</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
 
   <PropertyGroup>
