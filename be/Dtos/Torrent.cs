@@ -68,14 +68,14 @@ public record Torrent(
 
     private static State Convert(TorrentState state) => state switch
     {
-        TorrentState.Stopped => State.Stopped,
+        TorrentState.Stopped => State.Complete,
         TorrentState.Paused => State.Paused,
         TorrentState.Starting => State.Initializing,
         TorrentState.Downloading => State.Downloading,
-        TorrentState.Seeding => State.Stopped,
+        TorrentState.Seeding => State.Complete,
         TorrentState.Hashing => State.Initializing,
         TorrentState.HashingPaused => State.Paused,
-        TorrentState.Stopping => State.Stopped,
+        TorrentState.Stopping => State.Downloading,
         TorrentState.Error => State.Error,
         TorrentState.Metadata => State.Initializing,
         TorrentState.FetchingHashes => State.Initializing,

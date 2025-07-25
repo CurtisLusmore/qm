@@ -117,63 +117,8 @@ export default function TorrentList(): React.ReactElement {
       <TableCell align='right'>{torrent.seeders}</TableCell>
       <TableCell><Tooltip title={torrent.infoHash}><span>{torrent.name}</span></Tooltip></TableCell>
       <TableCell>{torrent.state || 'Loading'}</TableCell>
-      <TableCell><Actions torrent={torrent} /></TableCell>
+      <TableCell><Actions torrent={torrent} setDeleteTorrent={setDeleteTorrent} /></TableCell>
     </TableRow>;
-  };
-
-  function Progress({ torrent }: { torrent: Torrent }): React.ReactElement {
-    const variant = [ 'Stopped', 'Downloading', 'Paused' ].includes(torrent.state)
-      ? 'buffer'
-      : 'indeterminate';
-    const color = torrent.state === 'Paused' ? 'warning' :
-      torrent.state === 'Error' ? 'error' :
-      torrent.state === 'Stopped' ? 'success' :
-        'info';
-
-    return <Tooltip title={`${Util.FormatBytes(torrent.downloadedBytes)}/${Util.FormatBytes(torrent.targetBytes)} (${Util.FormatPercent(torrent.partialProgressPercent)})`}>
-      <LinearProgress color={color} variant={variant} value={torrent.progressPercent} valueBuffer={torrent.targetPercent} />
-    </Tooltip>
-  };
-
-  function Actions({ torrent }: { torrent: Torrent }): React.ReactElement {
-    return torrent.state === 'Stopped'
-      ? <ButtonGroup variant='text'>
-          <Tooltip title='Archive'>
-            <Button size='small' onClick={handleArchive}><Archive /></Button>
-          </Tooltip>
-        </ButtonGroup>
-      : <ButtonGroup variant='text'>
-          {
-            [ 'Paused', 'HashingPaused' ].includes(torrent.state)
-              ? <Tooltip title='Resume'>
-                  <Button size='small' onClick={handlePause}><Downloading /></Button>
-                </Tooltip>
-              : <Tooltip title='Pause'>
-                  <Button size='small' onClick={handlePause}><PauseCircle /></Button>
-                </Tooltip>
-          }
-          <Tooltip title='Delete'>
-            <Button size='small' onClick={handleDelete} color='error'><Delete /></Button>
-          </Tooltip>
-        </ButtonGroup>;
-
-    async function handlePause(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
-      event.stopPropagation();
-      const state = torrent.state === 'Paused'
-        ? 'Downloading'
-        : 'Paused';
-      await updateTorrent(torrent.infoHash, { state });
-    };
-
-    function handleDelete(event: React.MouseEvent<HTMLButtonElement>): void {
-      event.stopPropagation();
-      setDeleteTorrent(torrent);
-    };
-
-    async function handleArchive(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
-      event.stopPropagation();
-      await removeTorrent(torrent.infoHash);
-    };
   };
 
   async function handleDeleteTorrent(): Promise<void> {
@@ -183,5 +128,60 @@ export default function TorrentList(): React.ReactElement {
 
   function handleSearch(): void {
     window.dispatchEvent(new CustomEvent('search'));
+  };
+};
+
+function Progress({ torrent }: { torrent: Torrent }): React.ReactElement {
+  const variant = [ 'Complete', 'Downloading', 'Paused' ].includes(torrent.state)
+    ? 'buffer'
+    : 'indeterminate';
+  const color = torrent.state === 'Paused' ? 'warning' :
+    torrent.state === 'Error' ? 'error' :
+    torrent.state === 'Complete' ? 'success' :
+      'info';
+
+  return <Tooltip title={`${Util.FormatBytes(torrent.downloadedBytes)}/${Util.FormatBytes(torrent.targetBytes)} (${Util.FormatPercent(torrent.partialProgressPercent)})`}>
+    <LinearProgress color={color} variant={variant} value={torrent.progressPercent} valueBuffer={torrent.targetPercent} />
+  </Tooltip>
+};
+
+function Actions({ torrent, setDeleteTorrent }: { torrent: Torrent, setDeleteTorrent: (torrent: Torrent) => void }): React.ReactElement {
+  return torrent.state === 'Complete'
+    ? <ButtonGroup variant='text'>
+        <Tooltip title='Archive'>
+          <Button size='small' onClick={handleArchive}><Archive /></Button>
+        </Tooltip>
+      </ButtonGroup>
+    : <ButtonGroup variant='text'>
+        {
+          [ 'Paused', 'HashingPaused' ].includes(torrent.state)
+            ? <Tooltip title='Resume'>
+                <Button size='small' onClick={handlePause}><Downloading /></Button>
+              </Tooltip>
+            : <Tooltip title='Pause'>
+                <Button size='small' onClick={handlePause}><PauseCircle /></Button>
+              </Tooltip>
+        }
+        <Tooltip title='Delete'>
+          <Button size='small' onClick={handleDelete} color='error'><Delete /></Button>
+        </Tooltip>
+      </ButtonGroup>;
+
+  async function handlePause(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
+    event.stopPropagation();
+    const state = torrent.state === 'Paused'
+      ? 'Downloading'
+      : 'Paused';
+    await updateTorrent(torrent.infoHash, { state });
+  };
+
+  function handleDelete(event: React.MouseEvent<HTMLButtonElement>): void {
+    event.stopPropagation();
+    setDeleteTorrent(torrent);
+  };
+
+  async function handleArchive(event: React.MouseEvent<HTMLButtonElement>): Promise<void> {
+    event.stopPropagation();
+    await removeTorrent(torrent.infoHash);
   };
 };

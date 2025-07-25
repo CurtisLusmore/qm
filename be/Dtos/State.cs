@@ -10,12 +10,6 @@ namespace qm.Dtos;
 public enum State
 {
     /// <summary>
-    /// Stopped
-    /// </summary>
-    [EnumMember(Value = "Stopped")]
-    Stopped,
-
-    /// <summary>
     /// Initializing
     /// </summary>
     [EnumMember(Value = "Initializing")]
@@ -32,6 +26,12 @@ public enum State
     /// </summary>
     [EnumMember(Value = "Paused")]
     Paused,
+
+    /// <summary>
+    /// Complete
+    /// </summary>
+    [EnumMember(Value = "Complete")]
+    Complete,
 
     /// <summary>
     /// Error

@@ -41,7 +41,7 @@ export interface TorrentFilePatch {
   priority: Priority;
 };
 
-export type State = 'Stopped' | 'Hashing' | 'Downloading' | 'Paused' | 'Error';
+export type State = 'Initializing' | 'Downloading' | 'Paused' | 'Complete' | 'Error';
 export type Priority = 'Skip' | 'Normal' | 'High';
 
 const api = {
