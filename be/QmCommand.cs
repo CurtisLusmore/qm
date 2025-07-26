@@ -47,7 +47,7 @@ public class QmCommand : RootCommand
                 opts.AddPolicy("cors", policy =>
                 {
                     policy
-                        .WithOrigins("http://localhost:5173")
+                        .AllowAnyOrigin()
                         .WithMethods("GET", "POST", "PATCH", "DELETE")
                         .WithHeaders("Content-Type");
                 });

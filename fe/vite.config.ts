@@ -8,4 +8,7 @@ export default defineConfig({
     outDir: '../be/wwwroot',
     emptyOutDir: true,
   },
+  server: {
+    host: true,
+  },
 })

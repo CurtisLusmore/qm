@@ -7,9 +7,12 @@ import {
 import {
   getTorrents,
 } from './Client';
+import {
+  TorrentsFailedEvent,
+  TorrentsLoadedEvent,
+} from './Events';
 import SearchForm from './SearchForm';
 import TorrentList from './TorrentList';
-import TorrentFileList from './TorrentFileList';
 
 const loadTorrents = (function (): ((force: boolean) => Promise<void>) {
   let inProgress = false;
@@ -18,10 +21,10 @@ const loadTorrents = (function (): ((force: boolean) => Promise<void>) {
     inProgress = true;
     try {
       const torrents = await getTorrents();
-      window.dispatchEvent(new CustomEvent('torrents', { detail: torrents }));
+      window.dispatchEvent(new TorrentsLoadedEvent(torrents));
     }
     catch {
-      window.dispatchEvent(new CustomEvent('failed'));
+      window.dispatchEvent(new TorrentsFailedEvent());
     }
     finally {
       inProgress = false;
@@ -36,6 +39,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    function handler(event: Event) {
+      const { torrents } = (event as TorrentsLoadedEvent).detail;
+      const complete = torrents.filter(torrent => torrent.state === 'Complete').length;
+      const total = torrents.length;
+      document.title = total === 0
+        ? 'qm'
+        : `qm (${complete}/${total})`;
+    };
+    window.addEventListener('torrents', handler);
+    return () => window.removeEventListener('torrents', handler);
+  }, []);
+
+  useEffect(() => {
     function handler() {
       loadTorrents(true);
     };
@@ -43,9 +59,8 @@ export default function App() {
     return () => window.removeEventListener('refresh', handler);
   }, []);
 
-  return <Container maxWidth='lg'>
+  return <Container maxWidth='lg' sx={{ padding: 0 }}>
     <SearchForm />
     <TorrentList />
-    <TorrentFileList />
   </Container>;
 };

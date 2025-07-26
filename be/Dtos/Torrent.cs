@@ -53,8 +53,8 @@ public record Torrent(
         var progressPercent = sizeBytes == 0 ? 0 : 100.0m * downloadedBytes / sizeBytes;
         return new Torrent(
             infoHash,
-            torrent.Torrent?.Name ?? "Loading...",
-            Convert(torrent.State),
+            torrent.Torrent?.Name ?? "",
+            GetState(torrent),
             torrent.Peers.Seeds,
             downloadedBytes,
             targetBytes,
@@ -66,9 +66,9 @@ public record Torrent(
             files);
     }
 
-    private static State Convert(TorrentState state) => state switch
+    private static State GetState(TorrentManager manager) => manager.State switch
     {
-        TorrentState.Stopped => State.Complete,
+        TorrentState.Stopped => manager.PartialProgress == 100.0 ? State.Complete : State.Paused,
         TorrentState.Paused => State.Paused,
         TorrentState.Starting => State.Initializing,
         TorrentState.Downloading => State.Downloading,
@@ -79,6 +79,6 @@ public record Torrent(
         TorrentState.Error => State.Error,
         TorrentState.Metadata => State.Initializing,
         TorrentState.FetchingHashes => State.Initializing,
-        _ => throw new ArgumentOutOfRangeException(nameof(state)),
+        _ => throw new ArgumentOutOfRangeException(nameof(manager)),
     };
 }

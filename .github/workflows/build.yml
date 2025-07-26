@@ -24,7 +24,7 @@ jobs:
         node-version: '22'
 
     - name: Build front-end project
-      run: npm run build --prefix fe
+      run: npm run cibuild --prefix fe
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
