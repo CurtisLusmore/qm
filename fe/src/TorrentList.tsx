@@ -94,7 +94,6 @@ export default function TorrentList(): React.ReactElement {
   useEffect(() => {
     function handler(event : Event): void {
       const { torrents } = (event as TorrentsLoadedEvent).detail;
-      torrents.sort((a, b) => a.name.localeCompare(b.name));
       setTorrents(torrents);
       setConnectionFailed(false);
       setLoading(false);
