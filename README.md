@@ -2,7 +2,8 @@
 
 A tool for searching and downloading torrents
 
-![Screenshot of Quartermaster][Screenshot]
+![Screenshot of Quartermaster in Desktop Browser][Screenshot-Desktop]
+![Screenshot of Quartermaster in Mobile Browser][Screenshot-Mobile]
 
 ## Installation
 
@@ -69,4 +70,5 @@ the application like you would any other (usually double-clicking it).
 
 
 [Latest Release]: http://github.com/CurtisLusmore/qm/releases/latest
-[Screenshot]: https://raw.githubusercontent.com/CurtisLusmore/qm/refs/heads/main/screenshot.png
+[Screenshot-Desktop]: https://raw.githubusercontent.com/CurtisLusmore/qm/refs/heads/main/screenshot-desktop.png
+[Screenshot-Mobile]: https://raw.githubusercontent.com/CurtisLusmore/qm/refs/heads/main/screenshot-mobile.png
