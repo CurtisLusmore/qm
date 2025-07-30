@@ -7,7 +7,8 @@ namespace qm.Services;
 /// Service for searching apibay.org for torrents
 /// </summary>
 /// <param name="client">An HTTP client</param>
-public class SearchService(HttpClient client)
+/// <param name="logger">A logger</param>
+public class SearchService(HttpClient client, ILogger<SearchService> logger)
 {
     private const string baseUrl = "https://apibay.org/";
 
@@ -20,9 +21,11 @@ public class SearchService(HttpClient client)
     {
         var results = (await client.GetFromJsonAsync<ApiBaySearchResult[]>($"{baseUrl}q.php?q={HttpUtility.UrlEncode(terms)}"))
             ?? [];
-        return results.Length == 1 && results.Single().id == "0"
-            ? []
-            : results.Select(result => (TorrentSearchResult)result).ToArray();
+        if (results.Length == 1 && results.Single().id == "0") results = [];
+
+        logger.LogDebug("Search for \"{terms}\" returned {results} results", terms, results.Length);
+
+        return results.Select(result => (TorrentSearchResult)result).ToArray();
     }
 
     private record ApiBaySearchResult(

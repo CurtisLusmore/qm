@@ -28,10 +28,28 @@ public enum State
     Paused,
 
     /// <summary>
+    /// Completing
+    /// </summary>
+    [EnumMember(Value = "Completing")]
+    Completing,
+
+    /// <summary>
     /// Complete
     /// </summary>
     [EnumMember(Value = "Complete")]
     Complete,
+
+    /// <summary>
+    /// Removing
+    /// </summary>
+    [EnumMember(Value = "Removing")]
+    Removing,
+
+    /// <summary>
+    /// Removed
+    /// </summary>
+    [EnumMember(Value = "Removed")]
+    Removed,
 
     /// <summary>
     /// Error

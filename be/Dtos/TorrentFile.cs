@@ -1,5 +1,3 @@
-using MonoTorrent;
-
 namespace qm.Dtos;
 
 /// <summary>
@@ -17,33 +15,4 @@ public record TorrentFile(
     decimal ProgressPercent,
     Priority Priority)
 {
-    /// <summary>
-    /// Convert from a <see cref="ITorrentManagerFile"/>
-    /// </summary>
-    /// <param name="file">The file</param>
-    /// <returns>The converted file</returns>
-    public static TorrentFile ConvertFrom(ITorrentManagerFile file)
-    {
-        var downloadedBytes = ITorrentFileInfoExtensions.BytesDownloaded(file);
-        var sizeBytes = file.Length;
-        var progressPercent = sizeBytes == 0 ? 0 : 100.0m * downloadedBytes / sizeBytes;
-        return new TorrentFile(
-            file.Path,
-            downloadedBytes,
-            sizeBytes,
-            progressPercent,
-            Convert(file.Priority));
-    }
-
-    private static Priority Convert(MonoTorrent.Priority priority) => priority switch
-    {
-        MonoTorrent.Priority.DoNotDownload => Priority.Skip,
-        MonoTorrent.Priority.Lowest => Priority.Normal,
-        MonoTorrent.Priority.Low => Priority.Normal,
-        MonoTorrent.Priority.Normal => Priority.Normal,
-        MonoTorrent.Priority.High => Priority.High,
-        MonoTorrent.Priority.Highest => Priority.High,
-        MonoTorrent.Priority.Immediate => Priority.High,
-        _ => throw new ArgumentOutOfRangeException(nameof(priority)),
-    };
 }

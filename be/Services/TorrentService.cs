@@ -1,44 +1,49 @@
 using Microsoft.Extensions.Options;
-using MonoTorrent;
-using MonoTorrent.Client;
 using qm.Dtos;
+using qm.Objects;
+using qm.Repositories;
 
 namespace qm.Services;
 
 /// <summary>
 /// Torrent service
 /// </summary>
-public class TorrentService(
-    string directoryRoot,
-    ILogger<TorrentService> logger) : BackgroundService
+public class TorrentService : BackgroundService
 {
+    private readonly string directoryRoot;
+    private readonly string downloadDirectory;
+    private readonly string metadataDirectory;
+    private readonly ILogger<TorrentService> logger;
+    private readonly ILoggerFactory loggerFactory;
+    private Repository<TorrentManager> repository = new Repository<TorrentManager>();
+    private MonoTorrent.Client.ClientEngine? engine;
+
     /// <summary>
     /// Torrent service
     /// </summary>
     /// <param name="config">Configuration</param>
     /// <param name="logger">Logger</param>
+    /// <param name="loggerFactory">Logger factory</param>
     public TorrentService(
         IOptions<TorrentServiceConfig> config,
-        ILogger<TorrentService> logger)
-        : this(config.Value.DirectoryRoot, logger)
+        ILogger<TorrentService> logger,
+        ILoggerFactory loggerFactory)
     {
+        directoryRoot = config.Value.DirectoryRoot;
+        downloadDirectory = Path.Join(directoryRoot, ".torrent");
+        metadataDirectory = Path.Join(downloadDirectory, "metadata");
+        this.logger = logger;
+        this.loggerFactory = loggerFactory;
     }
-
-    private string InProgressDirectory => Path.Join(directoryRoot, ".torrent");
-    private string MetadataDirectory => Path.Join(InProgressDirectory, "metadata");
-    private string CompletedDirectory => directoryRoot;
-
-    private ClientEngine? engine;
-
-    private readonly List<(string InfoHash, TorrentManager Manager)> managers = [];
 
     /// <summary>
     /// Get all saved torrents
     /// </summary>
     /// <returns>The saved torrents</returns>
-    public IEnumerable<Dtos.Torrent> GetTorrents()
-        => managers
-            .Select(pair => Dtos.Torrent.ConvertFrom(pair.InfoHash, pair.Manager))
+    public IEnumerable<Torrent> GetTorrents()
+        => repository
+            .List()
+            .Select(torrent => (Torrent)torrent)
             .ToArray();
 
     /// <summary>
@@ -46,33 +51,50 @@ public class TorrentService(
     /// </summary>
     /// <param name="infoHash">The info hash of the torrent to get</param>
     /// <returns>The saved torrent</returns>
-    public Dtos.Torrent? GetTorrent(string infoHash)
+    public Torrent? GetTorrent(string infoHash)
     {
-        var manager = managers.SingleOrDefault(pair => pair.InfoHash == infoHash).Manager;
-        if (manager is null)
+        if (!repository.TryGet(infoHash, out var torrent))
         {
             logger.LogWarning("Torrent {infoHash} not found", infoHash);
             return null;
         }
 
-        var response = Dtos.Torrent.ConvertFrom(infoHash, manager);
-        return response;
+        return torrent;
     }
 
     /// <summary>
     /// Save a torrent to start downloading
     /// </summary>
-    /// <param name="infoHash">The info hash of the torrent to save</param>
+    /// <param name="details">The details of the torrent to save</param>
     /// <returns>Whether the torrent could be saved</returns>
-    public bool SaveTorrent(string infoHash)
+    public bool SaveTorrent(SaveTorrent details)
     {
-        if (managers.Any(manager => manager.InfoHash == infoHash))
+        var (infoHash, name) = details;
+        if (repository.Contains(infoHash))
         {
             logger.LogWarning("Torrent {infoHash} already saved", infoHash);
             return false;
         }
 
-        Task.Run(() => DownloadOrLoadTorrentAsync(infoHash));
+        var torrent = new TorrentManager(
+            infoHash,
+            name,
+            directoryRoot,
+            engine!,
+            loggerFactory.CreateLogger<TorrentManager>());
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await torrent.StartAsync();
+                repository.Add(infoHash, torrent);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred saving torrent {infoHash}: {reason}", infoHash, ex);
+            }
+        });
 
         return true;
     }
@@ -84,14 +106,24 @@ public class TorrentService(
     /// <returns>Whether the request could be accepted</returns>
     public bool RemoveTorrent(string infoHash)
     {
-        var manager = managers.SingleOrDefault(pair => pair.InfoHash == infoHash).Manager;
-        if (manager is null)
+        if (!repository.TryGet(infoHash, out var torrent))
         {
             logger.LogWarning("Torrent {infoHash} not found", infoHash);
             return false;
         }
 
-        Task.Run(() => DeleteTorrentAsync(infoHash, manager));
+        Task.Run(async () =>
+        {
+            try
+            {
+                await torrent.StopAsync();
+                repository.Remove(infoHash);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred removing torrent {infoHash}: {reason}", infoHash, ex);
+            }
+        });
 
         return true;
     }
@@ -104,14 +136,23 @@ public class TorrentService(
     /// <returns>Whether the request could be accepted</returns>
     public bool UpdateTorrent(string infoHash, TorrentPatch patch)
     {
-        var manager = managers.SingleOrDefault(pair => pair.InfoHash == infoHash).Manager;
-        if (manager is null)
+        if (!repository.TryGet(infoHash, out var torrent))
         {
             logger.LogWarning("Torrent {infoHash} not found", infoHash);
             return false;
         }
 
-        Task.Run(() => UpdateTorrentAsync(infoHash, manager, patch));
+        Task.Run(async () =>
+        {
+            try
+            {
+                await torrent.PatchAsync(patch);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred updating torrent {infoHash}: {reason}", infoHash, ex);
+            }
+        });
 
         return true;
     }
@@ -119,194 +160,90 @@ public class TorrentService(
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        engine = new ClientEngine(
-            new EngineSettingsBuilder
-            {
-                AutoSaveLoadMagnetLinkMetadata = true,
-                CacheDirectory = InProgressDirectory,
-            }.ToSettings());
-
-        // Initialize torrents
-        logger.LogInformation("Initializing torrents from \"{path}\"", MetadataDirectory);
-        Directory.CreateDirectory(MetadataDirectory);
-        var files = Directory.GetFiles(MetadataDirectory, "*.torrent");
-        await Task.WhenAll(files.Select(async file =>
+        try
+        {
+            await RunAsync(stoppingToken);
+        }
+        catch (OperationCanceledException)
         {
             try
             {
-                var infoHash = Path.GetFileNameWithoutExtension(file);
-                await DownloadOrLoadTorrentAsync(infoHash);
+                await CleanupAsync();
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred loading torrent {file}: {reason}", file, ex);
+                logger.LogCritical(ex, "An error occurred while cleaning up torrent service: {reason}", ex);
+                throw;
             }
-        }));
+        }
+    }
+
+    private async Task RunAsync(CancellationToken stoppingToken)
+    {
+        engine = new MonoTorrent.Client.ClientEngine(
+            new MonoTorrent.Client.EngineSettingsBuilder
+            {
+                AutoSaveLoadMagnetLinkMetadata = true,
+                CacheDirectory = downloadDirectory,
+            }.ToSettings());
+
+        // Initialize torrents
+        logger.LogInformation("Initializing torrents from \"{path}\"", metadataDirectory);
+        Directory.CreateDirectory(metadataDirectory);
+        var files = Directory.GetFiles(metadataDirectory, "*.torrent");
+        var infoHashes = files
+            .Select(file => Path.GetFileNameWithoutExtension(file)!)
+            .ToArray();
+
+        foreach (var infoHash in infoHashes)
+        {
+            try
+            {
+                var torrent = new TorrentManager(infoHash, "", directoryRoot, engine, loggerFactory.CreateLogger<TorrentManager>());
+                await torrent.StartAsync();
+                repository.Add(infoHash, torrent);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred loading torrent {infoHash}: {reason}", infoHash, ex);
+            }
+        }
 
         // Monitor torrents
         while (!stoppingToken.IsCancellationRequested)
         {
-            var managersArray = managers.ToArray();
-            foreach (var (infoHash, manager) in managersArray)
+            var torrents = repository.List();
+            if (!torrents.Any())
             {
-                try
+                logger.LogTrace("No torrents to monitor");
+            }
+            foreach (var torrent in torrents)
                 {
-                    var progress = manager.PartialProgress;
-                    switch (manager.State)
+                    try
                     {
-                        case TorrentState.Seeding:
-                            progress = 100;
-                            break;
-                        case TorrentState.Error:
-                            await manager.StopAsync();
-                            await manager.StartAsync();
-                            break;
-                        case TorrentState.Stopped:
-                            continue;
+                        await torrent.MonitorAsync();
                     }
-                    if (progress == 100) await CompleteTorrentAsync(infoHash, manager);
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "An error occurred while monitoring torrent {infoHash}: {reason}", torrent.InfoHash, ex);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "An error occurred while monitoring torrent {infoHash}: {reason}", infoHash, ex);
-                }
-            }
             await Task.Delay(1_000, stoppingToken);
+            stoppingToken.ThrowIfCancellationRequested();
         }
     }
 
-    private async Task<TorrentManager> DownloadOrLoadTorrentAsync(string infoHash)
+    private async Task CleanupAsync()
     {
-        try
+        foreach (var torrent in repository.List())
         {
-            var manager = managers.SingleOrDefault(pair => pair.InfoHash == infoHash).Manager;
-            if (manager is not null) return manager;
-
-            var magnetLink = new MagnetLink(InfoHash.FromHex(infoHash));
-            manager = await engine!.AddAsync(magnetLink, InProgressDirectory);
-            await manager.StartAsync();
-            managers.Add((infoHash, manager));
-            logger.LogInformation("Downloading {infoHash} to \"{path}\"", infoHash, InProgressDirectory);
-            return manager;
+            await torrent.SaveFastResumeAsync();
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred downloading {infoHash}: {reason}", infoHash, ex);
-            throw;
-        }
+        await engine!.StopAllAsync();
+        logger.LogInformation("Stopped all torrents");
+        engine.Dispose();
+        logger.LogInformation("Shut down engine");
     }
-
-    private async Task DeleteTorrentAsync(string infoHash, TorrentManager manager)
-    {
-        try
-        {
-            if (manager.State != TorrentState.Stopped)
-            {
-                await manager.StopAsync();
-
-                foreach (var file in manager.Files)
-                {
-                    if (File.Exists(file.FullPath)) File.Delete(file.FullPath);
-                    logger.LogDebug("Deleted \"{path}\"", file.FullPath);
-                }
-
-                DeleteDirectories(manager);
-
-                var torrentFile = Path.Join(MetadataDirectory, $"{infoHash}.torrent");
-                if (File.Exists(torrentFile)) File.Delete(torrentFile);
-                logger.LogDebug("Deleted \"{path}\"", torrentFile);
-
-                await engine!.RemoveAsync(manager);
-            }
-
-            managers.Remove((infoHash, manager));
-
-            logger.LogInformation("Removed torrent \"{name} ({infoHash})", manager.Name, infoHash);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred removing {infoHash}: {reason}", infoHash, ex);
-            throw;
-        }
-    }
-
-    private async Task UpdateTorrentAsync(string infoHash, TorrentManager manager, TorrentPatch patch)
-    {
-        try
-        {
-            switch (patch.State)
-            {
-                case PatchState.Downloading:
-                    await manager.StartAsync();
-                    logger.LogInformation("Resuming torrent \"{name}\" ({infoHash})", manager.Name, infoHash);
-                    break;
-                case PatchState.Paused:
-                    await manager.PauseAsync();
-                    logger.LogInformation("Pausing torrent \"{name}\" ({infoHash})", manager.Name, infoHash);
-                    break;
-            }
-
-            foreach (var file in patch.Files ?? [])
-            {
-                await manager.SetFilePriorityAsync(
-                    manager.Files.Single(torrentFile => torrentFile.Path == file.Path),
-                    Convert(file.Priority));
-                logger.LogInformation("Setting priority to {priority} for \"{path}\" of torrent \"{name}\" ({infoHash})", file.Priority, file.Path, manager.Name, infoHash);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred updating {infoHash}: {reason}", infoHash, ex);
-            throw;
-        }
-    }
-
-    private async Task CompleteTorrentAsync(string infoHash, TorrentManager manager)
-    {
-        try
-        {
-            var newPath = Path.Join(CompletedDirectory, manager.Name);
-            await manager.StopAsync();
-            await manager.MoveFilesAsync(newPath, true);
-            logger.LogDebug("Moved files to \"{path}\"", newPath);
-            DeleteUnwantedFiles(manager);
-            DeleteDirectories(manager);
-            await engine!.RemoveAsync(manager);
-
-            logger.LogInformation("Completed torrent \"{name} ({infoHash})", manager.Name, infoHash);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred completing {infoHash}: {reason}", infoHash, ex);
-            throw;
-        }
-    }
-
-    private void DeleteUnwantedFiles(TorrentManager manager)
-    {
-        foreach (var file in manager.Files)
-        {
-            if (file.Priority == MonoTorrent.Priority.DoNotDownload)
-            {
-                File.Delete(file.FullPath);
-                logger.LogDebug("Deleted unwanted file {path}", file.FullPath);
-            }
-        }
-    }
-
-    private void DeleteDirectories(TorrentManager manager)
-    {
-        var directory = Path.Join(InProgressDirectory, manager.Name);
-        if (Directory.Exists(directory)) Directory.Delete(directory, true);
-    }
-
-    private static MonoTorrent.Priority Convert(Dtos.Priority priority) => priority switch
-    {
-        Dtos.Priority.Skip => MonoTorrent.Priority.DoNotDownload,
-        Dtos.Priority.Normal => MonoTorrent.Priority.Normal,
-        Dtos.Priority.High => MonoTorrent.Priority.High,
-        _ => throw new ArgumentOutOfRangeException(nameof(priority)),
-    };
 }
 
 /// <summary>

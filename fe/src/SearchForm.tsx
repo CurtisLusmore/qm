@@ -139,18 +139,18 @@ export default function SearchForm(): React.ReactElement {
   </>;
 
   function ListRow(result: TorrentSearchResult): React.ReactElement {
-    const createClickHandler = function (infoHash: string): React.MouseEventHandler {
+    const createClickHandler = function (infoHash: string, name: string): React.MouseEventHandler {
       return async function (): Promise<void> {
         setTerms('');
         setResults([]);
         setOpen(false);
-        await saveTorrent(infoHash);
+        await saveTorrent(infoHash, name);
       };
     };
 
     return <TableRow
       key={result.infoHash}
-      onClick={createClickHandler(result.infoHash)}
+      onClick={createClickHandler(result.infoHash, result.name)}
       hover
       style={{ cursor: 'pointer' }}
     >

@@ -22,13 +22,16 @@ public class QmCommand : RootCommand
     {
         var rootOpt = new Option<string>("--root") { Description = "Download directory root", DefaultValueFactory = _ => Environment.CurrentDirectory };
         var portOpt = new Option<int>("--port") { Description = "Listening port", DefaultValueFactory = _ => 8080 };
+        var noOpenOpt = new Option<bool>("--no-open") { Description = "Don't open web browser", DefaultValueFactory = _ => false };
 
         Add(rootOpt);
         Add(portOpt);
+        Add(noOpenOpt);
         SetAction(parseResult =>
         {
             var root = parseResult.GetRequiredValue(rootOpt);
             var port = parseResult.GetRequiredValue(portOpt);
+            var noOpen = parseResult.GetRequiredValue(noOpenOpt);
 
             if (string.IsNullOrWhiteSpace(root)) root = Environment.CurrentDirectory;
             root = Path.IsPathFullyQualified(root)
@@ -73,7 +76,7 @@ public class QmCommand : RootCommand
                 .First();
             logger.LogInformation("Application listening at {address}", ip);
 
-            Process.Start(new ProcessStartInfo($"http://localhost:{port}") { UseShellExecute = true });
+            if (!noOpen) Process.Start(new ProcessStartInfo($"http://localhost:{port}") { UseShellExecute = true });
 
             app.Run();
         });

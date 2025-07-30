@@ -1,6 +1,6 @@
 using System.Reflection;
-using Microsoft.Extensions.Logging.Console;
 using qm;
+using qm.Logging;
 using qm.Services;
 
 namespace Microsoft.Extensions.DependencyInjection.Extensions;
@@ -11,18 +11,29 @@ namespace Microsoft.Extensions.DependencyInjection.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// 
+    /// Add logging via the <see cref="SimpleLogger"/>
     /// </summary>
-    /// <param name="builder"></param>
-    /// <returns></returns>
+    /// <param name="builder">The Web Application Builder</param>
+    /// <returns>The Web Application Builder</returns>
     public static WebApplicationBuilder AddLogging(this WebApplicationBuilder builder)
     {
+        var config = new ManualOptions<SimpleLoggerConfig>
+        {
+            Value = new SimpleLoggerConfig
+            {
+                MinimumLoggingLevel = LogLevel.Information,
+            },
+        };
+        builder.Services
+            .AddSingleton(config)
+            .AddSingleton<LogLevelService>()
+            .AddHostedService(sp => sp.GetRequiredService<LogLevelService>());
         builder.Logging
-            .SetMinimumLevel(LogLevel.Debug)
+            .SetMinimumLevel(LogLevel.Trace)
             .AddFilter("Microsoft", LogLevel.Warning)
             .AddFilter("System", LogLevel.Warning)
-            .AddConsole(opts => opts.FormatterName = nameof(MinimalConsoleFormatter));
-        builder.Services.AddSingleton<ConsoleFormatter, MinimalConsoleFormatter>();
+            .ClearProviders()
+            .AddProvider(new SimpleLoggerProvider(config));
         return builder;
     }
 
@@ -35,11 +46,15 @@ public static class ServiceCollectionExtensions
     {
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
-            });
+            builder.Services
+                .AddEndpointsApiExplorer()
+                .AddSwaggerGen(options =>
+                {
+                    options.IncludeXmlComments(
+                        Path.Join(
+                            AppContext.BaseDirectory,
+                            $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
+                });
         }
         return builder;
     }
@@ -51,8 +66,9 @@ public static class ServiceCollectionExtensions
     /// <returns>The Web Application Builder</returns>
     public static WebApplicationBuilder AddSearchService(this WebApplicationBuilder builder)
     {
-        builder.Services.AddHttpClient();
-        builder.Services.AddScoped<SearchService>();
+        builder.Services
+            .AddHttpClient()
+            .AddScoped<SearchService>();
         return builder;
     }
 
@@ -72,9 +88,10 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        builder.Services.Configure<TorrentServiceConfig>(builder.Configuration.GetSection(TorrentServiceConfig.SectionName));
-        builder.Services.AddSingleton<TorrentService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<TorrentService>());
+        builder.Services
+            .Configure<TorrentServiceConfig>(builder.Configuration.GetSection(TorrentServiceConfig.SectionName))
+            .AddSingleton<TorrentService>()
+            .AddHostedService(sp => sp.GetRequiredService<TorrentService>());
         return builder;
     }
 
@@ -87,8 +104,9 @@ public static class ServiceCollectionExtensions
     {
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            app
+                .UseSwagger()
+                .UseSwaggerUI();
         }
         return app;
     }

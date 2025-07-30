@@ -46,15 +46,15 @@ public class TorrentsController(TorrentService service) : ControllerBase
     /// <summary>
     /// Save a torrent to start downloading
     /// </summary>
-    /// <param name="infoHash">The info hash of the torrent to save</param>
+    /// <param name="torrent">The details of the torrent to save</param>
     /// <response code="202">The request has been accepted</response>
     /// <response code="400">Torrent could not be saved</response>
-    [HttpPost("{infoHash}")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status202Accepted, Type = null!)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = null!)]
-    public IActionResult SaveTorrentAsync(string infoHash)
+    public IActionResult SaveTorrentAsync(SaveTorrent torrent)
     {
-        var accepted = service.SaveTorrent(infoHash);
+        var accepted = service.SaveTorrent(torrent);
         return accepted
             ? Accepted()
             : BadRequest();

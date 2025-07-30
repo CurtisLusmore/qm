@@ -11,7 +11,7 @@ export interface Torrent {
   partialProgressPercent: number;
   targetPercent: number;
   progressPercent: number;
-  numFiles: number;
+  bytesPerSecond: number;
   files: TorrentFile[];
 };
 
@@ -41,7 +41,14 @@ export interface TorrentFilePatch {
   priority: Priority;
 };
 
-export type State = 'Initializing' | 'Downloading' | 'Paused' | 'Complete' | 'Error';
+export type State = 'Initializing'
+  | 'Downloading'
+  | 'Paused'
+  | 'Completing'
+  | 'Complete'
+  | 'Removing'
+  | 'Removed'
+  | 'Error';
 export type Priority = 'Skip' | 'Normal' | 'High';
 
 const api = {
@@ -82,8 +89,8 @@ export async function getTorrent(infoHash: string): Promise<Torrent> {
   return torrent;
 };
 
-export async function saveTorrent(infoHash: string): Promise<void> {
-  await api.post(`/api/torrents/${infoHash}`);
+export async function saveTorrent(infoHash: string, name: string): Promise<void> {
+  await api.post('/api/torrents', { infoHash, name });
 };
 
 export async function removeTorrent(infoHash: string): Promise<void> {

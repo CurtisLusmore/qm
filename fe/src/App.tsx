@@ -44,8 +44,8 @@ export default function App() {
       const complete = torrents.filter(torrent => torrent.state === 'Complete').length;
       const total = torrents.length;
       document.title = total === 0
-        ? 'qm'
-        : `qm (${complete}/${total})`;
+        ? 'Quartermaster'
+        : `Quartermaster (${complete}/${total})`;
     };
     window.addEventListener('torrents', handler);
     return () => window.removeEventListener('torrents', handler);

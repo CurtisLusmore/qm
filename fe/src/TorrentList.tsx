@@ -11,6 +11,7 @@ import {
   Card,
   CardActions,
   CardContent,
+  CircularProgress,
   Collapse,
   Dialog,
   DialogActions,
@@ -29,7 +30,6 @@ import {
   Tooltip,
   Typography,
   type LinearProgressProps,
-  Skeleton,
 } from '@mui/material';
 import {
   AddCircle,
@@ -37,6 +37,7 @@ import {
   CheckCircle,
   Close,
   Delete,
+  DownloadForOffline,
   Downloading,
   Error,
   ExpandLess,
@@ -44,7 +45,6 @@ import {
   PauseCircle,
   Pending,
   RemoveCircle,
-  DownloadForOffline,
 } from '@mui/icons-material';
 import {
   removeTorrent,
@@ -115,23 +115,7 @@ export default function TorrentList(): React.ReactElement {
     {connectionFailed && <Alert severity='error' sx={{ marginBlock: '1em' }}>Connection lost. Attempting to reconnect ...</Alert>}
     {
       loading
-        ? <Card>
-            <CardContent sx={{ flex: '1' }}>
-              <Typography fontSize='large'><Skeleton variant='text' width='20ch' /></Typography>
-              <Box sx={{ display: { sm: 'flex' } }} columnGap={2}>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  <Skeleton variant='text' width='10ch' />
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  <Skeleton variant='text' width='8ch' />
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  <Skeleton variant='text' width='15ch' />
-                </Typography>
-              </Box>
-            </CardContent>
-            <LinearProgress variant='indeterminate' />
-          </Card>
+        ? <Box sx={{ width: '100%', textAlign: 'center' }}><CircularProgress /></Box>
         : torrents.length > 0
         ? <Stack spacing={2}>
             {torrents.map(torrent => <TorrentCard key={torrent.infoHash} torrent={torrent} />)}
@@ -201,6 +185,9 @@ function TorrentCard({ torrent }: { torrent: Torrent}): React.ReactElement {
           <Typography sx={{ color: 'text.secondary' }}>
             {Util.FormatBytes(torrent.downloadedBytes)} of {Util.FormatBytes(torrent.targetBytes)} ({Util.FormatPercent(torrent.partialProgressPercent)})
           </Typography>
+          {torrent.state == 'Downloading' && <Typography sx={{ color: 'text.secondary' }}>
+            {Util.FormatBytes(torrent.bytesPerSecond)}ps
+          </Typography>}
         </Box>
       </CardContent>
       <CardActions>
@@ -217,7 +204,7 @@ function TorrentCard({ torrent }: { torrent: Torrent}): React.ReactElement {
       </CardActions>
     </Box>
     <LinearProgress
-      value={torrent.partialProgressPercent}
+      value={torrent.progressPercent}
       {...progressProps(torrent)}
     />
     <Collapse in={expanded}>
@@ -320,7 +307,7 @@ function progressProps(torrent: Torrent) : LinearProgressProps {
   switch (torrent.state) {
     case 'Initializing': return {
       color: 'info',
-      variant: 'indeterminate',
+      variant: 'query',
     };
     case 'Downloading': return {
       color: 'primary',
@@ -332,13 +319,22 @@ function progressProps(torrent: Torrent) : LinearProgressProps {
       variant: 'buffer',
       valueBuffer: torrent.targetPercent,
     };
+    case 'Completing': return {
+      color: 'success',
+      variant: 'indeterminate',
+    };
     case 'Complete': return {
       color: 'success',
-      variant: 'determinate',
+      variant: 'buffer',
+      valueBuffer: torrent.targetPercent,
+    };
+    case 'Removing': return {
+      color: 'error',
+      variant: 'indeterminate',
     };
     case 'Error': return {
       color: 'error',
-      variant: 'indeterminate',
+      variant: 'query',
     };
     default: return {};
   }
@@ -349,7 +345,10 @@ function stateIcon(torrent: Torrent): React.ReactElement {
     case 'Initializing': return <Pending fontSize='small' sx={{ marginBottom: '-0.2em' }} color='info' />;
     case 'Downloading': return <Downloading fontSize='small' sx={{ marginBottom: '-0.2em' }} color='primary' />;
     case 'Paused': return <PauseCircle fontSize='small' sx={{ marginBottom: '-0.2em' }} color='warning' />;
+    case 'Completing': return <DownloadForOffline fontSize='small' sx={{ marginBottom: '-0.2em' }} color='success' />;
     case 'Complete': return <CheckCircle fontSize='small' sx={{ marginBottom: '-0.2em' }} color='success' />;
+    case 'Removing': return <Delete fontSize='small' sx={{ marginBottom: '-0.2em' }} color='error' />;
+    case 'Removed': return <Delete fontSize='small' sx={{ marginBottom: '-0.2em' }} color='error' />;
     case 'Error': return <Error fontSize='small' sx={{ marginBottom: '-0.2em' }} color='error' />;
     default: return <></>;
   }
@@ -391,10 +390,11 @@ function Actions(torrent: Torrent): React.ReactElement[] {
         </Tooltip>,
       ];
 
+    case 'Completing':
     case 'Complete':
       return [
         <Tooltip key='Archive' title='Archive'>
-          <IconButton onClick={handleArchiveClick} color='success'><Archive /></IconButton>
+          <IconButton onClick={handleArchiveClick} color='success' disabled={torrent.state === 'Completing'}><Archive /></IconButton>
         </Tooltip>,
       ];
     default: return [];
