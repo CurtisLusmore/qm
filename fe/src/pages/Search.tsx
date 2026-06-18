@@ -1,0 +1,255 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  useMediaQuery,
+  IconButton,
+  ImageList,
+  ImageListItem,
+  ImageListItemBar,
+  InputAdornment,
+  Paper,
+  Skeleton,
+  TextField,
+  Container,
+  Typography,
+} from '@mui/material';
+import {
+  Close,
+  BookmarkAdd,
+  BookmarkRemove,
+  Search as SearchIcon,
+} from '@mui/icons-material';
+import { getSuggestions, getTitle } from '../clients';
+import { useCollection, useDebounced } from '../hooks';
+import type { CollectionStatus, Title, TitleSummary } from '../types';
+import useCaching from '../hooks/useCaching';
+
+export default function Search() {
+  const navigate = useNavigate();
+  const collection = useCollection();
+  const recentlyAdded = collection.recentlyAdded;
+
+  const [ loading, setLoading ] = useState(false);
+  const [ searchTerm, setSearchTerm ] = useState('');
+  const [ searchResults, setSearchResults ] = useState<TitleSummary[]>([]);
+
+  const results: CollectionStatus<TitleSummary>[] = useMemo(
+    () => collection.check(searchResults),
+    [ collection, searchResults ]
+  );
+
+  const hasResults = !loading && searchTerm;
+  const noResults = !loading && searchTerm && results.length === 0;
+
+  const debouncedGetSuggestions = useDebounced(getSuggestions, 200);
+  const cachedGetTitle = useCaching(getTitle);
+
+  useEffect(() => {
+    if (searchTerm) setLoading(true);
+    debouncedGetSuggestions(searchTerm)
+      .then(results => {
+        setSearchResults(results);
+        setLoading(false);
+      }).catch(() => {});
+  }, [ searchTerm ]);
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setSearchTerm(event.target.value);
+  };
+
+  function handleClickClear() {
+    setSearchTerm('');
+  };
+
+  const sm = useMediaQuery((theme: any) => theme.breakpoints.down('sm'));
+  const md = useMediaQuery((theme: any) => theme.breakpoints.down('md'));
+
+  return (
+    <>
+      <Paper
+        elevation={2}
+        sx={{
+          p: 2,
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
+        }}
+      >
+        <TextField
+          label="Search"
+          variant="outlined"
+          value={searchTerm}
+          onChange={handleChange}
+          fullWidth
+          autoFocus
+          slotProps={{
+            input: {
+              endAdornment: hasResults ? (
+                <InputAdornment position="end">
+                  <Close onClick={handleClickClear} sx={{ cursor: 'pointer' }} />
+                </InputAdornment>
+              ) : (
+                <InputAdornment position="end">
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }
+          }}
+        />
+      </Paper>
+      {
+        !searchTerm && (
+          <Container sx={{ py: 4 }}>
+            <Typography>Recently Added</Typography>
+            <ImageList cols={3} gap={8} sx={{ mt: 0 }} rowHeight={400}>
+              {recentlyAdded.map((item: Title) => (
+                <TitleItem key={item.id} item={item} navigate={navigate} />
+              ))}
+            </ImageList>
+          </Container>
+        )
+      }
+      {loading && (
+        <ImageList cols={sm ? 1 : md ? 2 : 3} gap={8} rowHeight={400}>
+          <ImageListItem key='skeleton-1'>
+            <Skeleton variant="rectangular" height="100%" />
+          </ImageListItem>
+          <ImageListItem key='skeleton-2'>
+            <Skeleton variant="rectangular" height="100%" />
+          </ImageListItem>
+          <ImageListItem key='skeleton-3'>
+            <Skeleton variant="rectangular" height="100%" />
+          </ImageListItem>
+        </ImageList>
+      )}
+      {hasResults &&(
+        <ImageList cols={sm ? 1 : md ? 2 : 3} gap={8} rowHeight={400}>
+          {results?.map((item: CollectionStatus<TitleSummary>) => (
+            <SearchResultItem
+              key={item.id}
+              item={item}
+              add={collection.add}
+              remove={collection.remove}
+              getTitle={cachedGetTitle}
+              navigate={navigate}
+            />
+          ))}
+        </ImageList>
+      )}
+      {noResults && (
+        <Paper
+          elevation={2}
+          sx={{ p: 2, my: 2 }}
+        >
+          No results found.
+        </Paper>
+      )}
+    </>
+  );
+};
+
+function SearchResultItem({ item, add, remove, getTitle, navigate }: {
+  item: CollectionStatus<TitleSummary>,
+  add: (title: Title) => void,
+  remove: (titleId: string) => void,
+  getTitle: (titleId: string) => Promise<Title>,
+  navigate: (path: string) => void,
+}) {
+  const title = item.year ? `${item.name} (${item.year})` : item.name;
+  const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
+
+  function handleMouseEnter() {
+    getTitle(item.id).catch(() => {});
+  };
+
+  function handleClickTitle(ev: React.MouseEvent) {
+    ev.stopPropagation();
+    switch (item.type) {
+      case 'movie':
+        navigate(`/movies?id=${item.id}`);
+        break;
+      case 'series':
+        navigate(`/series?id=${item.id}`);
+        break;
+    }
+  };
+
+  function handleClickAdd(ev: React.MouseEvent) {
+    ev.stopPropagation();
+    getTitle(item.id).then(add);
+  };
+
+  function handleClickRemove(ev: React.MouseEvent) {
+    ev.stopPropagation();
+    remove(item.id);
+  };
+
+  return (
+    <ImageListItem
+      key={item.id}
+      sx={{ cursor: 'pointer' }}
+      onMouseEnter={handleMouseEnter}
+      onClick={handleClickTitle}
+    >
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      <ImageListItemBar
+        title={title}
+        subtitle={subtitle}
+        actionIcon={item.inCollection ? (
+          <IconButton
+            title="Remove from Collection"
+            onClick={handleClickRemove}
+          >
+            <BookmarkRemove />
+          </IconButton>
+        ) : (
+          <IconButton
+            title="Add to Collection"
+            onClick={handleClickAdd}
+          >
+            <BookmarkAdd />
+          </IconButton>
+        )}
+      />
+    </ImageListItem>
+   );
+};
+
+function TitleItem({ item, navigate }: { item: Title, navigate: (path: string) => void }): React.ReactElement {
+  const title = item.year ? `${item.name} (${item.year})` : item.name;
+  const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
+
+  function handleClickTitle(ev: React.MouseEvent) {
+    ev.stopPropagation();
+    switch (item.type) {
+      case 'movie':
+        navigate(`/movies?id=${item.id}`);
+        break;
+      case 'series':
+        navigate(`/series?id=${item.id}`);
+        break;
+    }
+  };
+
+  return (
+    <ImageListItem
+      key={item.id}
+      sx={{ cursor: 'pointer' }}
+      onClick={handleClickTitle}
+    >
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      <ImageListItemBar
+        title={title}
+        subtitle={subtitle}
+      />
+    </ImageListItem>
+   );
+};
