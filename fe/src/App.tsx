@@ -21,6 +21,7 @@ import {
   Playlist,
   Series,
 } from './pages';
+import { createCollectionContext } from './contexts';
 
 const theme = createTheme({
   palette: {
@@ -59,13 +60,14 @@ const router = createBrowserRouter([
 });
 
 function RootLayout(): React.ReactElement {
+  const collection = createCollectionContext();
   return (
     <ThemeProvider theme={theme}>
-      <CollectionContextProvider>
+      <CollectionContextProvider value={collection}>
         <CssBaseline />
         <NavigationTabs />
         <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
-          <Outlet />
+          { collection.loaded && <Outlet /> }
           <ScrollRestoration />
         </Container>
       </CollectionContextProvider>

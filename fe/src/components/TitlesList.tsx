@@ -14,6 +14,7 @@ import {
   Close,
   Search,
 } from '@mui/icons-material';
+import { useAutofocus } from '../hooks';
 import type { Title } from '../types';
 
 export default function TitlesList({ titles, navigate, remove }: {
@@ -24,6 +25,7 @@ export default function TitlesList({ titles, navigate, remove }: {
   const [ searchTerm, setSearchTerm ] = useState('');
   const sm = useMediaQuery((theme: any) => theme.breakpoints.down('sm'));
   const md = useMediaQuery((theme: any) => theme.breakpoints.down('md'));
+  const ref = useAutofocus();
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     setSearchTerm(event.target.value);
@@ -53,9 +55,12 @@ export default function TitlesList({ titles, navigate, remove }: {
           variant="outlined"
           value={searchTerm}
           onChange={handleChange}
+          inputRef={ref}
           fullWidth
-          autoFocus
           slotProps={{
+            htmlInput: {
+              enterKeyHint: 'search',
+            },
             input: {
               endAdornment: searchTerm ? (
                 <InputAdornment position="end">

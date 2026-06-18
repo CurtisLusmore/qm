@@ -1,4 +1,5 @@
 export interface Collection {
+  loaded: boolean;
   movies: Title[];
   series: Title[];
   recentlyAdded: Title[];

@@ -1,21 +1,27 @@
 import { createContext, useEffect, useReducer } from 'react';
 import { KeyValueStorePromise } from '../clients';
 import type { Collection, CollectionStatus, Movie, Series, Title, TitleSummary } from '../types';
+import type { KeyValueStore } from '@fifteenthstandard/storage';
 
 export const CollectionContext = createContext<Collection>({} as Collection);
 
 type State = {
+  loaded: boolean;
+  store: KeyValueStore | undefined;
   movies: Record<string, CollectionStatus<Movie>>;
   series: Record<string, CollectionStatus<Series>>;
 };
 
 const initialState = {
+  loaded: false,
+  store: undefined,
   movies: {} as Record<string, CollectionStatus<Movie>>,
   series: {} as Record<string, CollectionStatus<Series>>,
 };
 
 type InitializeAction = {
   type: 'initialize';
+  store: KeyValueStore | undefined;
   movies: CollectionStatus<Movie>[];
   series: CollectionStatus<Series>[];
 };
@@ -41,8 +47,8 @@ type Action =
   | RemoveAction
   | UpdateAction;
 
-function initialize(state: State, movies: CollectionStatus<Movie>[], series: CollectionStatus<Series>[]): State {
-  const newState = { ...state };
+function initialize(state: State, store: KeyValueStore | undefined, movies: CollectionStatus<Movie>[], series: CollectionStatus<Series>[]): State {
+  const newState = { ...state, store, loaded: true };
   movies.forEach(t => newState.movies[t.id] = t);
   series.forEach(t => newState.series[t.id] = t);
   return newState;
@@ -121,8 +127,8 @@ function update(state: State, title: CollectionStatus<Title>): State {
 function reduce(state: State, action: Action): State {
   switch (action.type) {
     case 'initialize': {
-      const { movies, series } = action;
-      return initialize(state, movies, series);
+      const { store, movies, series } = action;
+      return initialize(state, store, movies, series);
     }
 
     case 'add': {
@@ -155,7 +161,7 @@ export function createCollectionContext(): Collection {
         store.list<CollectionStatus<Movie>>('movie').all() as Promise<CollectionStatus<Movie>[]>,
         store.list<CollectionStatus<Series>>('series').all() as Promise<CollectionStatus<Series>[]>,
       ]);
-      dispatch({ type: 'initialize', movies, series });
+      dispatch({ type: 'initialize', store, movies, series });
     }());
   }, []);
 
@@ -185,15 +191,13 @@ export function createCollectionContext(): Collection {
       downloadStatus: 'not_downloaded',
     };
     dispatch({ type: 'add', title: collectionItem });
-    const store = await KeyValueStorePromise;
-    await store.put(title.type, title.id, collectionItem);
+    await state.store!.put(title.type, title.id, collectionItem);
   };
 
   async function remove(titleId: string): Promise<void> {
     dispatch({ type: 'remove', titleId });
-    const store = await KeyValueStorePromise;
     const title = get(titleId);
-    if (title) await store.remove(title.type, titleId);
+    if (title) await state.store!.remove(title.type, titleId);
   };
 
   async function markWatched(titleId: string): Promise<void> {
@@ -205,8 +209,7 @@ export function createCollectionContext(): Collection {
       lastWatched: new Date(),
     };
     dispatch({ type: 'update', title });
-    const store = await KeyValueStorePromise;
-    await store.put(title.type, titleId, title);
+    await state.store!.put(title.type, titleId, title);
   };
 
   function check<T extends TitleSummary>(searchResults: T | T[]): any {
@@ -223,6 +226,7 @@ export function createCollectionContext(): Collection {
   };
 
   return {
+    loaded: state.loaded,
     movies,
     series,
     recentlyAdded,
@@ -233,4 +237,3 @@ export function createCollectionContext(): Collection {
     check,
   };
 };
-

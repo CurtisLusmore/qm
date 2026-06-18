@@ -29,6 +29,7 @@ export default function NavigationTabs(): React.ReactElement {
       transform: 'translateX(-50%)',
       width: '100%',
       justifyContent: 'space-between',
+      zIndex: (theme: any) => theme.zIndex.appBar,
     }
     : {
       position: 'fixed',
@@ -44,10 +45,10 @@ export default function NavigationTabs(): React.ReactElement {
       variant="fullWidth"
       sx={{ ...style }}
     >
-      <Tab sx={{ minWidth: 0 }} icon={<Home />} title="Home" value="/" onClick={() => navigate('/')} />
-      <Tab sx={{ minWidth: 0 }} icon={<Movie />} title="Movies" value="/movies" onClick={() => navigate('/movies')} />
-      <Tab sx={{ minWidth: 0 }} icon={<Tv />} title="TV Series" value="/series" onClick={() => navigate('/series')} />
-      <Tab sx={{ minWidth: 0 }} icon={<PlaylistPlay />} title="Playlist" value="/playlist" onClick={() => navigate('/playlist')} />
+      <Tab icon={<Home />} title="Home" value="/" onClick={() => navigate('/')} />
+      <Tab icon={<Movie />} title="Movies" value="/movies" onClick={() => navigate('/movies')} />
+      <Tab icon={<Tv />} title="TV Series" value="/series" onClick={() => navigate('/series')} />
+      <Tab icon={<PlaylistPlay />} title="Playlist" value="/playlist" onClick={() => navigate('/playlist')} />
     </Tabs>
   )
 };

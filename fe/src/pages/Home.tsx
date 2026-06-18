@@ -20,9 +20,8 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { getSuggestions, getTitle } from '../clients';
-import { useCollection, useDebounced } from '../hooks';
+import { useAutofocus, useCaching, useCollection, useDebounced } from '../hooks';
 import type { CollectionStatus, Title, TitleSummary } from '../types';
-import useCaching from '../hooks/useCaching';
 
 export default function Search() {
   const navigate = useNavigate();
@@ -63,6 +62,7 @@ export default function Search() {
 
   const sm = useMediaQuery((theme: any) => theme.breakpoints.down('sm'));
   const md = useMediaQuery((theme: any) => theme.breakpoints.down('md'));
+  const ref = useAutofocus();
 
   return (
     <>
@@ -80,9 +80,12 @@ export default function Search() {
           variant="outlined"
           value={searchTerm}
           onChange={handleChange}
+          inputRef={ref}
           fullWidth
-          autoFocus
           slotProps={{
+            htmlInput: {
+              enterKeyHint: 'search',
+            },
             input: {
               endAdornment: hasResults ? (
                 <InputAdornment position="end">
@@ -93,7 +96,7 @@ export default function Search() {
                   <SearchIcon />
                 </InputAdornment>
               )
-            }
+            },
           }}
         />
       </Paper>
