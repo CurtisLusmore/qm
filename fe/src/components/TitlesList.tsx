@@ -12,7 +12,7 @@ import {
 import {
   BookmarkRemove,
   Close,
-  Search,
+  FilterList,
 } from '@mui/icons-material';
 import { useAutofocus } from '../hooks';
 import type { Title } from '../types';
@@ -51,7 +51,8 @@ export default function TitlesList({ titles, navigate, remove }: {
         }}
       >
         <TextField
-          label="Search"
+          label="Filter Titles"
+          placeholder="Filter titles in your collection"
           variant="outlined"
           value={searchTerm}
           onChange={handleChange}
@@ -68,7 +69,7 @@ export default function TitlesList({ titles, navigate, remove }: {
                 </InputAdornment>
               ) : (
                 <InputAdornment position="end">
-                  <Search />
+                  <FilterList />
                 </InputAdornment>
               )
             }

@@ -23,7 +23,6 @@ export default function Series({ id }: { id: string }) {
       if (title) {
         setTitle(title);
         setEpisodesLoaded(true);
-        return;
       }
 
       title = collection.check(await getTitle(id!, false)) as CollectionStatus<Series>;

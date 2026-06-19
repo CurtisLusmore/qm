@@ -170,7 +170,7 @@ export function createCollectionContext(): Collection {
   const recentlyAdded = [...movies, ...series]
     .filter(item => item.addedOn !== undefined)
     .toSorted((a, b) => b.addedOn!.getTime() - a.addedOn!.getTime())
-    .slice(0, 3);
+    .slice(0, 10);
 
   function get(titleId: string): CollectionStatus<Title> | undefined {
     if (state.movies.hasOwnProperty(titleId)) {

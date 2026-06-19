@@ -76,7 +76,8 @@ export default function Search() {
         }}
       >
         <TextField
-          label="Search"
+          label="Search Titles"
+          placeholder="Search for movies or TV series to add to your collection"
           variant="outlined"
           value={searchTerm}
           onChange={handleChange}
@@ -104,7 +105,11 @@ export default function Search() {
         !searchTerm && (
           <Container sx={{ py: 4 }}>
             <Typography>Recently Added</Typography>
-            <ImageList cols={3} gap={8} sx={{ mt: 0 }} rowHeight={400}>
+            <ImageList
+              cols={3} gap={8}
+              rowHeight={400}
+              sx={{ mt: 0, overflowX: 'scroll', display: 'flex', flexWrap: 'nowrap' }}
+            >
               {recentlyAdded.map((item: Title) => (
                 <TitleItem key={item.id} item={item} navigate={navigate} />
               ))}
@@ -144,7 +149,7 @@ export default function Search() {
           elevation={2}
           sx={{ p: 2, my: 2 }}
         >
-          No results found.
+          No results found
         </Paper>
       )}
     </>
@@ -241,7 +246,7 @@ function TitleItem({ item, navigate }: { item: Title, navigate: (path: string) =
   return (
     <ImageListItem
       key={item.id}
-      sx={{ cursor: 'pointer' }}
+      sx={{ cursor: 'pointer', flexShrink: 0 }}
       onClick={handleClickTitle}
     >
       <img
