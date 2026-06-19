@@ -15,7 +15,7 @@ export default function Movie({ id }: { id: string }) {
     }());
   }, [ collection, id ]);
 
-  return title === undefined ? null : (
+  return (
     <TitleCard title={title} markWatched={collection.markWatched} addToCollection={collection.add} />
   );
 };

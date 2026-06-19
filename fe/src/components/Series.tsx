@@ -4,6 +4,7 @@ import {
   CardHeader,
   CardMedia,
   Divider,
+  Skeleton,
   Stack,
 } from '@mui/material';
 import { getTitle } from '../clients';
@@ -14,20 +15,33 @@ import type { CollectionStatus, Episode, Series } from '../types';
 export default function Series({ id }: { id: string }) {
   const collection = useCollection();
   const [ title, setTitle ] = useState<CollectionStatus<Series> | undefined>(undefined);
+  const [ episodesLoaded, setEpisodesLoaded ] = useState(false);
 
   useEffect(() => {
     (async function () {
-      const fetchedTitle = collection.get(id!) || collection.check(await getTitle(id!));
-      setTitle(fetchedTitle as CollectionStatus<Series>);
+      let title = collection.get(id!) as CollectionStatus<Series> | undefined;
+      if (title) {
+        setTitle(title);
+        setEpisodesLoaded(true);
+        return;
+      }
+
+      title = collection.check(await getTitle(id!, false)) as CollectionStatus<Series>;
+      setTitle(title);
+
+      title = collection.check(await getTitle(id!, true)) as CollectionStatus<Series>;
+      setTitle(title);
+      setEpisodesLoaded(true);
     }());
   }, [ collection, id ]);
 
-  return title === undefined ? null : (
+  return (
     <TitleCard title={title} markWatched={collection.markWatched} addToCollection={collection.add}>
       <Stack
         divider={<Divider />}
       >
-        {title.episodes?.map(episode => (
+        {!episodesLoaded && [1, 2, 3].map(() => <EpisodeSectionSkeleton />)}
+        {title && title.episodes?.map(episode => (
           <EpisodeSection key={episode.id} episode={episode} />
         ))}
       </Stack>
@@ -59,6 +73,22 @@ function EpisodeSection({ episode }: { episode: Episode }) {
       </CardContent>
     </Stack>
   )
+};
+
+function EpisodeSectionSkeleton() {
+  return (
+    <Stack direction="row" spacing={1} sx={{ padding: 1 }}>
+      <Skeleton variant="rectangular" width={150} height={100} sx={{ flexShrink: 0 }} />
+      <CardContent sx={{ py: 0 }}>
+        <CardHeader
+          title={<Skeleton variant="text" width={200} />}
+          subheader={<Skeleton variant="text" width={150} />}
+          sx={{ padding: 0 }}
+        />
+        <Skeleton variant="text" width={300} />
+      </CardContent>
+    </Stack>
+  );
 };
 
 function leftPad(num: number, size: number) {

@@ -159,7 +159,7 @@ function mapTitleResultToSeries(result: TitleResult): Series {
   };
 };
 
-export default async function getTitle(id: string): Promise<Title> {
+export default async function getTitle(id: string, includeEpisodes: boolean = true): Promise<Title> {
   let result = await query(id);
 
   switch (result.titleType.text) {
@@ -176,7 +176,7 @@ export default async function getTitle(id: string): Promise<Title> {
 
       const episodes: Episode[] = [];
       let endCursor: string;
-      while (true) {
+      while (includeEpisodes) {
         const episodeResults = result.episodes?.episodes.edges || [];
         episodes.push(...episodeResults.filter(edge => edge.node.runtime).map(edge => mapTitleResultToEpisode(edge.node)));
         endCursor = result.episodes?.episodes.pageInfo.endCursor || '';

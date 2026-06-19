@@ -5,6 +5,7 @@ import {
   CardHeader,
   Chip,
   Divider,
+  Skeleton,
   Stack,
 } from '@mui/material';
 import {
@@ -18,6 +19,21 @@ import {
 import type { CollectionStatus, Title } from '../types';
 
 export default function TitleCard({ children, title, addToCollection, markWatched }: {
+  children?: React.ReactNode,
+  title: CollectionStatus<Title> | undefined,
+  addToCollection: (title: CollectionStatus<Title>) => void,
+  markWatched: (titleId: string) => void
+}): React.ReactElement {
+  return title === undefined ? (
+    <TitleCardSkeleton>{children}</TitleCardSkeleton>
+  ) : (
+    <TitleCardInner title={title} addToCollection={addToCollection} markWatched={markWatched}>
+      {children}
+    </TitleCardInner>
+  );
+};
+
+function TitleCardInner({ children, title, addToCollection, markWatched }: {
   children?: React.ReactNode,
   title: CollectionStatus<Title>,
   addToCollection: (title: CollectionStatus<Title>) => void,
@@ -79,6 +95,45 @@ export default function TitleCard({ children, title, addToCollection, markWatche
       <Divider />
       <CardContent>
         <strong>Stars</strong>&nbsp;&nbsp;&nbsp;{title.cast?.map(c => c.name).join(', ')}
+      </CardContent>
+      {children && <>
+        <Divider />
+        {children}
+      </>}
+    </Card>
+  );
+};
+
+function TitleCardSkeleton({ children }: { children?: React.ReactNode }): React.ReactElement {
+  return (
+    <Card sx={{ elevation: 2, marginTop: 2 }}>
+      <CardHeader
+        title={<Skeleton variant="text" width={200} />}
+        subheader={<Skeleton variant="text" width={150} />}
+      />
+      <CardContent>
+        <Stack direction="row" spacing={1}>
+          <Skeleton variant="rectangular" width={100} height={40} />
+        </Stack>
+      </CardContent>
+      <Stack direction="row" spacing={1} sx={{ padding: 1 }}>
+        <Skeleton variant="rectangular" width={200} height={300} />
+        <Skeleton variant="rectangular" width={'100%'} height={300} sx={{ flexGrow: 1 }} />
+      </Stack>
+      <CardContent>
+        <Skeleton variant="text" width={'100%'} />
+      </CardContent>
+      <Divider />
+      <CardContent>
+        <Skeleton variant="text" width={100} sx={{ display: 'inline-block' }} />&nbsp;&nbsp;&nbsp;<Skeleton variant="text" width={200} sx={{ display: 'inline-block' }} />
+      </CardContent>
+      <Divider />
+      <CardContent>
+        <Skeleton variant="text" width={100} sx={{ display: 'inline-block' }} />&nbsp;&nbsp;&nbsp;<Skeleton variant="text" width={200} sx={{ display: 'inline-block' }} />
+      </CardContent>
+      <Divider />
+      <CardContent>
+        <Skeleton variant="text" width={100} sx={{ display: 'inline-block' }} />&nbsp;&nbsp;&nbsp;<Skeleton variant="text" width={200} sx={{ display: 'inline-block' }} />
       </CardContent>
       {children && <>
         <Divider />
