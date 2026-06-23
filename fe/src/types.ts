@@ -21,6 +21,43 @@ export type CollectionStatus<T> = T & {
 
 export type DownloadStatus = 'not_downloaded' | 'downloading' | 'downloaded';
 
+export type DownloadSearchResult = {
+  infoHash: string;
+  name: string;
+  sizeBytes: number;
+  seeders: number;
+}
+
+export type DownloadTracker = {
+  infoHash: string;
+  title: Title;
+  status: DownloadTrackerStatus;
+  error?: string;
+  downloadedBytes: number;
+  targetBytes: number;
+  totalBytes: number;
+  partialProgressPercent: number;
+  targetProgressPercent: number;
+  totalProgressPercent: number;
+  bytesPerSecond: number;
+  seeds: number;
+}
+
+export type DownloadTrackerStatus =
+  | 'Received'
+  | 'DownloadingTorrentFile'
+  | 'DownloadTorrentFileFailed'
+  | 'DownloadedTorrentFile'
+  | 'AddedTorrent'
+  | 'StartedTorrent'
+  | 'InitializingTorrent'
+  | 'DownloadingTorrent'
+  | 'PausedTorrent'
+  | 'DownloadedTorrent'
+  | 'StoppingTorrent'
+  | 'StoppedTorrent'
+  | 'DownloadTorrentFailed';
+
 export type Episode = Title & {
   seasonNumber: number;
   episodeNumber: number;

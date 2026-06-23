@@ -39,7 +39,7 @@ export default function Series({ id }: { id: string }) {
       <Stack
         divider={<Divider />}
       >
-        {!episodesLoaded && [1, 2, 3].map(() => <EpisodeSectionSkeleton />)}
+        {!episodesLoaded && [1, 2, 3].map((_, index) => <EpisodeSectionSkeleton key={index} />)}
         {title && title.episodes?.map(episode => (
           <EpisodeSection key={episode.id} episode={episode} />
         ))}

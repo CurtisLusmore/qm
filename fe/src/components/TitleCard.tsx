@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,6 +8,7 @@ import {
   Divider,
   Skeleton,
   Stack,
+  Button,
 } from '@mui/material';
 import {
   BookmarkAdd,
@@ -16,7 +18,9 @@ import {
   Visibility,
   VisibilityOutlined,
 } from '@mui/icons-material';
+import { DownloadSearch } from '.';
 import type { CollectionStatus, Title } from '../types';
+import { useDispatchToast } from '../hooks';
 
 export default function TitleCard({ children, title, addToCollection, markWatched }: {
   children?: React.ReactNode,
@@ -39,6 +43,8 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
   addToCollection: (title: CollectionStatus<Title>) => void,
   markWatched: (titleId: string) => void
 }): React.ReactElement {
+  const dispatchToast = useDispatchToast();
+  const [ downloadSearchOpen, setDownloadSearchOpen ] = useState(false);
   const lastWatched = title.watched && title.lastWatched ? getRelativeDateText(title.lastWatched) : null;
   const subheaders = [
     title.year,
@@ -51,56 +57,67 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
     !title.inCollection && <Chip key="add" icon={<BookmarkAdd />} label="Add to Collection" onClick={() => addToCollection(title)} />,
     title.inCollection && title.watched && title.lastWatched && <Chip key="watched" icon={<Visibility />} label={lastWatched} title={`Last watched ${lastWatched}`} />,
     title.inCollection && (!title.watched || !title.lastWatched) && <Chip key="mark" icon={<VisibilityOutlined />} label="Mark Watched" onClick={() => markWatched(title.id)} />,
-    title.inCollection && title.downloadStatus === 'not_downloaded' && <Chip key="download" icon={<Download />} label="Download" />,
+    title.inCollection && title.downloadStatus === 'not_downloaded' && <Chip key="download" icon={<Download />} label="Download" onClick={() => setDownloadSearchOpen(true)} />,
     title.inCollection && title.downloadStatus === 'downloading' && <Chip key="downloading" icon={<Downloading />} label="Downloading" />,
     title.inCollection && title.downloadStatus === 'downloaded' && <Chip key="downloaded" icon={<DownloadDone />} label="Downloaded" />,
   ];
 
   return (
-    <Card sx={{ elevation: 2, marginTop: 2 }}>
-      <CardHeader
-        title={title.name}
-        subheader={<>{subheaders}</>}
-      />
-      <CardContent>
-        <Stack direction="row" spacing={1}>
-          {chips}
+    <>
+      <Card sx={{ elevation: 2, marginTop: 2 }}>
+        <CardHeader
+          title={title.name}
+          subheader={<>{subheaders}</>}
+        />
+        <CardContent>
+          <Stack direction="row" spacing={1}>
+            {chips}
+          </Stack>
+        </CardContent>
+        <Stack direction="row" spacing={1} sx={{ padding: 1 }}>
+          <CardMedia
+            component="img"
+            image={title.imageUrl}
+            alt={title.name}
+            sx={{ width: 200, height: 300, objectFit: 'cover' }}
+          />
+          <CardMedia
+            component="video"
+            src={title.trailerUrl}
+            controls
+            sx={{ height: 300, objectFit: 'cover' }}
+          />
         </Stack>
-      </CardContent>
-      <Stack direction="row" spacing={1} sx={{ padding: 1 }}>
-        <CardMedia
-          component="img"
-          image={title.imageUrl}
-          alt={title.name}
-          sx={{ width: 200, height: 300, objectFit: 'cover' }}
-        />
-        <CardMedia
-          component="video"
-          src={title.trailerUrl}
-          controls
-          sx={{ height: 300, objectFit: 'cover' }}
-        />
-      </Stack>
-      <CardContent>
-        {title.plot}
-      </CardContent>
-      <Divider />
-      <CardContent>
-        <strong>Directors</strong>&nbsp;&nbsp;&nbsp;{title.directors?.map(d => d.name).join(', ')}
-      </CardContent>
-      <Divider />
-      <CardContent>
-        <strong>Writers</strong>&nbsp;&nbsp;&nbsp;{title.writers?.map(w => w.name).join(', ')}
-      </CardContent>
-      <Divider />
-      <CardContent>
-        <strong>Stars</strong>&nbsp;&nbsp;&nbsp;{title.cast?.map(c => c.name).join(', ')}
-      </CardContent>
-      {children && <>
+        <CardContent>
+          {title.plot}
+        </CardContent>
         <Divider />
-        {children}
-      </>}
-    </Card>
+        <CardContent>
+          <strong>Directors</strong>&nbsp;&nbsp;&nbsp;{title.directors?.map(d => d.name).join(', ')}
+        </CardContent>
+        <Divider />
+        <CardContent>
+          <strong>Writers</strong>&nbsp;&nbsp;&nbsp;{title.writers?.map(w => w.name).join(', ')}
+        </CardContent>
+        <Divider />
+        <CardContent>
+          <strong>Stars</strong>&nbsp;&nbsp;&nbsp;{title.cast?.map(c => c.name).join(', ')}
+        </CardContent>
+        {children && <>
+          <Divider />
+          {children}
+        </>}
+      </Card>
+      <DownloadSearch
+        title={title}
+        open={downloadSearchOpen}
+        onClose={() => setDownloadSearchOpen(false)}
+        onSubmit={(result) => {
+          dispatchToast(`Downloading ${result.name}`, 'success');
+          setDownloadSearchOpen(false);
+        }}
+      />
+    </>
   );
 };
 

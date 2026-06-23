@@ -13,6 +13,8 @@ import {
 } from '@mui/material';
 import {
   CollectionContextProvider,
+  DownloadTracker,
+  ToastsContextProvider,
   NavigationTabs,
 } from './components';
 import {
@@ -64,13 +66,16 @@ function RootLayout(): React.ReactElement {
   return (
     <ThemeProvider theme={theme}>
       <CollectionContextProvider value={collection}>
-        <CssBaseline />
-        <NavigationTabs />
-        <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
-          { collection.loaded && <Outlet /> }
-          <ScrollRestoration />
-        </Container>
+        <ToastsContextProvider>
+          <CssBaseline />
+          <NavigationTabs />
+          <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
+            { collection.loaded && <Outlet /> }
+            <ScrollRestoration />
+          </Container>
+        </ToastsContextProvider>
       </CollectionContextProvider>
+      <DownloadTracker />
     </ThemeProvider>
   );
 };
