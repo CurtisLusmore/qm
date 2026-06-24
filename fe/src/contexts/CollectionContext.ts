@@ -1,22 +1,31 @@
-import { createContext, useEffect, useReducer } from 'react';
-import { KeyValueStorePromise } from '../clients';
-import type { Collection, CollectionStatus, Movie, Series, Title, TitleSummary } from '../types';
+import { createContext, useEffect, useReducer, useState } from 'react';
 import type { KeyValueStore } from '@fifteenthstandard/storage';
+import type {
+  Collection,
+  CollectionStatus,
+  DownloadTracker,
+  Movie,
+  Series,
+  ServerEvent,
+  Title,
+  TitleSummary,
+} from '../types';
+import { createServerEventSource, KeyValueStorePromise } from '../clients';
 
 export const CollectionContext = createContext<Collection>({} as Collection);
 
 type State = {
   loaded: boolean;
   store: KeyValueStore | undefined;
-  movies: Record<string, CollectionStatus<Movie>>;
-  series: Record<string, CollectionStatus<Series>>;
+  movies: CollectionStatus<Movie>[];
+  series: CollectionStatus<Series>[];
 };
 
 const initialState = {
   loaded: false,
   store: undefined,
-  movies: {} as Record<string, CollectionStatus<Movie>>,
-  series: {} as Record<string, CollectionStatus<Series>>,
+  movies: [] as CollectionStatus<Movie>[],
+  series: [] as CollectionStatus<Series>[],
 };
 
 type InitializeAction = {
@@ -47,10 +56,18 @@ type Action =
   | RemoveAction
   | UpdateAction;
 
+function sorted<T extends Title>(items: CollectionStatus<T>[]): CollectionStatus<T>[] {
+  return items.toSorted((a, b) => a.name.localeCompare(b.name));
+}
+
 function initialize(state: State, store: KeyValueStore | undefined, movies: CollectionStatus<Movie>[], series: CollectionStatus<Series>[]): State {
-  const newState = { ...state, store, loaded: true };
-  movies.forEach(t => newState.movies[t.id] = t);
-  series.forEach(t => newState.series[t.id] = t);
+  const newState = {
+    ...state,
+    loaded: true,
+    store,
+    movies: sorted(movies),
+    series: sorted(series)
+  };
   return newState;
 };
 
@@ -59,19 +76,13 @@ function addTitle(state: State, title: CollectionStatus<Title>): State {
     case 'movie':
       return {
         ...state,
-        movies: {
-          ...state.movies,
-          [title.id]: title as CollectionStatus<Movie>,
-        },
+        movies: sorted([...state.movies, title as CollectionStatus<Movie>]),
       };
 
     case 'series':
       return {
         ...state,
-        series: {
-          ...state.series,
-          [title.id]: title as CollectionStatus<Series>,
-        },
+        series: sorted([...state.series, title as CollectionStatus<Series>]),
       };
 
     default:
@@ -80,16 +91,14 @@ function addTitle(state: State, title: CollectionStatus<Title>): State {
 };
 
 function removeTitle(state: State, titleId: string): State {
-  if (state.movies.hasOwnProperty(titleId)) {
-    const newMovies = { ...state.movies };
-    delete newMovies[titleId];
+  if (state.movies.some(item => item.id === titleId)) {
+    const newMovies = state.movies.filter(item => item.id !== titleId);
     return {
       ...state,
       movies: newMovies,
     };
-  } else if (state.series.hasOwnProperty(titleId)) {
-    const newSeries = { ...state.series };
-    delete newSeries[titleId];
+  } else if (state.series.some(item => item.id === titleId)) {
+    const newSeries = state.series.filter(item => item.id !== titleId);
     return {
       ...state,
       series: newSeries,
@@ -104,19 +113,13 @@ function update(state: State, title: CollectionStatus<Title>): State {
     case 'movie':
       return {
         ...state,
-        movies: {
-          ...state.movies,
-          [title.id]: title as CollectionStatus<Movie>,
-        },
+        movies: sorted([...state.movies, title as CollectionStatus<Movie>]),
       };
 
     case 'series':
       return {
         ...state,
-        series: {
-          ...state.series,
-          [title.id]: title as CollectionStatus<Series>,
-        },
+        series: sorted([...state.series, title as CollectionStatus<Series>]),
       };
 
     default:
@@ -153,6 +156,7 @@ function reduce(state: State, action: Action): State {
 
 export function createCollectionContext(): Collection {
   const [ state, dispatch ] = useReducer(reduce, initialState);
+  const [ downloads, setDownloads ] = useState<DownloadTracker[]>([]);
 
   useEffect(() => {
     (async function initialize() {
@@ -165,21 +169,26 @@ export function createCollectionContext(): Collection {
     }());
   }, []);
 
-  const movies = Object.values(state.movies).toSorted((a, b) => a.name.localeCompare(b.name));
-  const series = Object.values(state.series).toSorted((a, b) => a.name.localeCompare(b.name));
-  const recentlyAdded = [...movies, ...series]
+  useEffect(() => {
+      const eventSource = createServerEventSource();
+      eventSource.onmessage = event => {
+        const data = JSON.parse(event.data) as ServerEvent;
+        const { downloads } = data;
+        setDownloads(downloads);
+      }
+  }, []);
+
+  const recentlyAdded = [ ...state.movies, ...state.series ]
     .filter(item => item.addedOn !== undefined)
     .toSorted((a, b) => b.addedOn!.getTime() - a.addedOn!.getTime())
     .slice(0, 10);
 
   function get(titleId: string): CollectionStatus<Title> | undefined {
-    if (state.movies.hasOwnProperty(titleId)) {
-      return state.movies[titleId];
-    } else if (state.series.hasOwnProperty(titleId)) {
-      return state.series[titleId];
-    } else {
-      return undefined;
-    }
+    const movie = state.movies.find(item => item.id === titleId);
+    if (movie) return movie;
+    const series = state.series.find(item => item.id === titleId);
+    if (series) return series;
+    return undefined;
   };
 
   async function add(title: Title): Promise<void> {
@@ -227,9 +236,10 @@ export function createCollectionContext(): Collection {
 
   return {
     loaded: state.loaded,
-    movies,
-    series,
+    movies: state.movies,
+    series: state.series,
     recentlyAdded,
+    downloads,
     get,
     add,
     remove,

@@ -73,9 +73,9 @@ function RootLayout(): React.ReactElement {
             { collection.loaded && <Outlet /> }
             <ScrollRestoration />
           </Container>
+          <DownloadTracker />
         </ToastsContextProvider>
       </CollectionContextProvider>
-      <DownloadTracker />
     </ThemeProvider>
   );
 };

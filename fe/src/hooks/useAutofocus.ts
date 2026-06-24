@@ -6,7 +6,6 @@ export default function useAutofocus() {
       const inputmode = node.getAttribute('inputmode') || 'text';
       if (inputmode === 'none') return;
       node.setAttribute('inputmode', 'none');
-      console.log('restoring inputmode to', inputmode);
       setTimeout(() => {
         node.focus();
         setTimeout(() => node.setAttribute('inputmode', inputmode), 50);

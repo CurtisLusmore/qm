@@ -112,10 +112,6 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
         title={title}
         open={downloadSearchOpen}
         onClose={() => setDownloadSearchOpen(false)}
-        onSubmit={(result) => {
-          dispatchToast(`Downloading ${result.name}`, 'success');
-          setDownloadSearchOpen(false);
-        }}
       />
     </>
   );

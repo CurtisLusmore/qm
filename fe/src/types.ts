@@ -3,6 +3,7 @@ export interface Collection {
   movies: Title[];
   series: Title[];
   recentlyAdded: Title[];
+  downloads: DownloadTracker[];
   get(titleId: string): CollectionStatus<Title> | undefined;
   add(title: Title): Promise<void>;
   remove(titleId: string): Promise<void>;
@@ -85,6 +86,10 @@ export type TitleSummary = {
 export type PersonSummary = {
   id: string;
   name: string;
+}
+
+export type ServerEvent = {
+  downloads: DownloadTracker[];
 }
 
 export type Title = TitleSummary & {

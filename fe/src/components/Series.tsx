@@ -32,7 +32,7 @@ export default function Series({ id }: { id: string }) {
       setTitle(title);
       setEpisodesLoaded(true);
     }());
-  }, [ collection, id ]);
+  }, [ collection.series, id ]);
 
   return (
     <TitleCard title={title} markWatched={collection.markWatched} addToCollection={collection.add}>

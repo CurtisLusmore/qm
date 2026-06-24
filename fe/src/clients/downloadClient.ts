@@ -27,18 +27,3 @@ export async function startDownload(infoHash: string, title: Title): Promise<voi
     throw new Error(`Download request failed with status ${response.status}`);
   }
 };
-
-export function useDownloadTrackers(): DownloadTracker[] {
-  const [ trackers, setTrackers ] = useState<DownloadTracker[]>([]);
-
-  useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5138/subscribe');
-    
-    eventSource.onmessage = (event) => {
-      const trackers = JSON.parse(event.data) as { downloads: DownloadTracker[] };
-      setTrackers(trackers.downloads);
-    };
-  }, []);
-
-  return trackers;
-}

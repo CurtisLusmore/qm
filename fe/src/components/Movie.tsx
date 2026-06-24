@@ -18,7 +18,7 @@ export default function Movie({ id }: { id: string }) {
       title = collection.check(await getTitle(id!)) as CollectionStatus<Movie>;
       setTitle(title);
     }());
-  }, [ collection, id ]);
+  }, [ collection.movies, id ]);
 
   return (
     <TitleCard title={title} markWatched={collection.markWatched} addToCollection={collection.add} />

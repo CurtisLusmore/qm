@@ -24,27 +24,27 @@ import {
   PauseCircle,
   Pending,
 } from '@mui/icons-material';
-import { useDownloadTrackers } from '../clients';
+import { useCollection } from '../hooks';
 import type { DownloadTracker, DownloadTrackerStatus } from '../types';
 
 export default function DownloadTracker(): React.ReactElement {
-  const trackers = useDownloadTrackers();
   const [ open, setOpen ] = useState(false);
+  const { downloads } = useCollection();
 
-  return trackers.length === 0 ? <></> : (
+  return downloads.length === 0 ? <></> : (
     <>
-      <FloatingButton trackers={trackers} onClick={() => setOpen(true)} />
+      <FloatingButton downloads={downloads} onClick={() => setOpen(true)} />
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Download Trackers</DialogTitle>
+        <DialogTitle>Downloads</DialogTitle>
         <DialogContent>
-          {trackers.length === 0 ? (
+          {downloads.length === 0 ? (
             <p>No active downloads.</p>
           ) : (
             <Stack spacing={2}>
-              {trackers.map((tracker) => (
+              {downloads.map(download => (
                 <DownloadCard
-                  key={tracker.infoHash}
-                  tracker={tracker}
+                  key={download.infoHash}
+                  download={download}
                 />
               ))}
             </Stack>
@@ -60,19 +60,19 @@ export default function DownloadTracker(): React.ReactElement {
   );
 };
 
-function FloatingButton({ trackers, onClick }: { trackers: DownloadTracker[], onClick: () => void }): React.ReactElement {
-  const totalDownloadedBytes = trackers.reduce((sum, tracker) => sum + tracker.downloadedBytes, 0);
-  const totalTargetBytes = trackers.reduce((sum, tracker) => sum + tracker.targetBytes, 0);
+function FloatingButton({ downloads, onClick }: { downloads: DownloadTracker[], onClick: () => void }): React.ReactElement {
+  const totalDownloadedBytes = downloads.reduce((sum, download) => sum + download.downloadedBytes, 0);
+  const totalTargetBytes = downloads.reduce((sum, download) => sum + download.targetBytes, 0);
   const overallProgressPercent = totalTargetBytes > 0 ? (totalDownloadedBytes / totalTargetBytes) * 100 : 0;
-  const anyFailed = trackers.some(tracker => tracker.status === 'DownloadTorrentFailed');
-  const allCompleted = trackers.every(tracker => ['DownloadedTorrent', 'StoppedTorrent', 'StoppingTorrent'].includes(tracker.status));
+  const anyFailed = downloads.some(download => download.status === 'DownloadTorrentFailed');
+  const allCompleted = downloads.every(download => ['DownloadedTorrent', 'StoppedTorrent', 'StoppingTorrent'].includes(download.status));
 
   return (
     <Fab
       onClick={onClick}
       color={anyFailed ? 'error' : allCompleted ? 'success' : 'primary'}
       style={{ position: 'fixed', bottom: 16, right: 16 }}
-      title={`${trackers.length} active download${trackers.length > 1 ? 's' : ''}, overall progress: ${overallProgressPercent.toFixed(1)}%`}
+      title={`${downloads.length} active download${downloads.length > 1 ? 's' : ''}, overall progress: ${overallProgressPercent.toFixed(1)}%`}
     >
       <CircularProgress
         variant="determinate"
@@ -96,26 +96,26 @@ function FloatingButton({ trackers, onClick }: { trackers: DownloadTracker[], on
   );
 };
 
-function DownloadCard({ tracker }: { tracker: DownloadTracker }): React.ReactElement {
+function DownloadCard({ download }: { download: DownloadTracker }): React.ReactElement {
   return (
     <Card>
       <Box sx={{ display: 'flex'}}>
         <CardContent sx={{ flexGrow: 1 }}>
-          <Typography variant="h6">{tracker.title.name} ({tracker.title.year})</Typography>
+          <Typography variant="h6">{download.title.name} ({download.title.year})</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start', padding: 0 }}>
-            {formatStatus(tracker.status)}
-            <Typography color="textSecondary">{tracker.seeds} seeders</Typography>
-            <Typography color="textSecondary">{formatBytes(tracker.downloadedBytes)} / {formatBytes(tracker.targetBytes)} ({formatPercent(tracker.partialProgressPercent)})</Typography>
-            <Typography color="textSecondary">{formatBytes(tracker.bytesPerSecond)}ps</Typography>
+            {formatStatus(download.status)}
+            <Typography color="textSecondary">{download.seeds} seeders</Typography>
+            <Typography color="textSecondary">{formatBytes(download.downloadedBytes)} / {formatBytes(download.targetBytes)} ({formatPercent(download.partialProgressPercent)})</Typography>
+            <Typography color="textSecondary">{formatBytes(download.bytesPerSecond)}ps</Typography>
           </Box>
-          {tracker.error && (
+          {download.error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {tracker.error}
+              {download.error}
             </Alert>
           )}
         </CardContent>
       </Box>
-      <LinearProgress {...useProgressProps(tracker)} />
+      <LinearProgress {...useProgressProps(download)} />
     </Card>
   );
 };
@@ -161,8 +161,8 @@ function formatPercent(percent: number): string {
   return `${percent.toFixed(1)}%`;
 };
 
-function useProgressProps(tracker: DownloadTracker): LinearProgressProps {
-  switch (tracker.status) {
+function useProgressProps(download: DownloadTracker): LinearProgressProps {
+  switch (download.status) {
     case 'Received':
     case 'DownloadingTorrentFile':
     case 'DownloadTorrentFileFailed':
@@ -172,13 +172,13 @@ function useProgressProps(tracker: DownloadTracker): LinearProgressProps {
     case 'InitializingTorrent':
       return { variant: 'query', color: 'info' };
     case 'DownloadingTorrent':
-      return { variant: 'buffer', value: tracker.partialProgressPercent, valueBuffer: tracker.targetProgressPercent };
+      return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent };
     case 'PausedTorrent':
-      return { variant: 'buffer', value: tracker.partialProgressPercent, valueBuffer: tracker.targetProgressPercent, color: 'warning' };
+      return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent, color: 'warning' };
     case 'DownloadedTorrent':
     case 'StoppingTorrent':
     case 'StoppedTorrent':
-      return { variant: 'buffer', value: tracker.partialProgressPercent, valueBuffer: tracker.targetProgressPercent, color: 'success' };
+      return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent, color: 'success' };
     case 'DownloadTorrentFailed':
       return { variant: 'indeterminate', color: 'error' };
     default:
