@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   createBrowserRouter,
   Outlet,
@@ -16,6 +17,7 @@ import {
   DownloadTracker,
   ToastsContextProvider,
   NavigationTabs,
+  ThemeSwitcher,
 } from './components';
 import {
   Home,
@@ -25,7 +27,16 @@ import {
 } from './pages';
 import { createCollectionContext } from './contexts';
 
-const theme = createTheme({
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    background: {
+      default: colors.grey[100],
+    },
+  },
+});
+
+const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     background: {
@@ -62,13 +73,15 @@ const router = createBrowserRouter([
 });
 
 function RootLayout(): React.ReactElement {
+  const [ theme, setTheme ] = useState<'light' | 'dark'>('dark');
   const collection = createCollectionContext();
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={theme === 'light' ? lightTheme : darkTheme}>
       <CollectionContextProvider value={collection}>
         <ToastsContextProvider>
           <CssBaseline />
           <NavigationTabs />
+          <ThemeSwitcher theme={theme} setTheme={setTheme} />
           <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
             { collection.loaded && <Outlet /> }
             <ScrollRestoration />

@@ -163,6 +163,7 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
   getTitle: (titleId: string) => Promise<Title>,
   navigate: (path: string) => void,
 }) {
+  const [ loading, setLoading ] = useState(false);
   const title = item.year ? `${item.name} (${item.year})` : item.name;
   const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
 
@@ -182,14 +183,27 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
     }
   };
 
-  function handleClickAdd(ev: React.MouseEvent) {
+  async function handleClickAdd(ev: React.MouseEvent) {
     ev.stopPropagation();
-    getTitle(item.id).then(add);
+    setLoading(true);
+    try {
+      const title = await getTitle(item.id);
+      add(title);
+    } catch (error) {
+      alert(error);
+    }
+    setLoading(false);
   };
 
-  function handleClickRemove(ev: React.MouseEvent) {
+  async function handleClickRemove(ev: React.MouseEvent) {
     ev.stopPropagation();
-    remove(item.id);
+    setLoading(true);
+    try {
+      remove(item.id);
+    } catch (error) {
+      alert(error);
+    }
+    setLoading(false);
   };
 
   return (
@@ -211,6 +225,8 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
           <IconButton
             title="Remove from Collection"
             onClick={handleClickRemove}
+            loading={loading}
+            sx={{ color: 'rgba(255, 255, 255)' }}
           >
             <BookmarkRemove />
           </IconButton>
@@ -218,6 +234,8 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
           <IconButton
             title="Add to Collection"
             onClick={handleClickAdd}
+            loading={loading}
+            sx={{ color: 'rgba(255, 255, 255)' }}
           >
             <BookmarkAdd />
           </IconButton>

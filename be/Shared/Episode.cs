@@ -17,7 +17,8 @@ public record Episode(
     PersonSummary[] Directors,
     PersonSummary[] Writers,
     int SeasonNumber,
-    int EpisodeNumber)
+    int EpisodeNumber,
+    bool Downloaded = false)
 : Title(
     Id,
     Type,
@@ -33,4 +34,5 @@ public record Episode(
     Ratings,
     Cast,
     Directors,
-    Writers);
+    Writers,
+    Downloaded);

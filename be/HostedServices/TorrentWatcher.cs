@@ -10,11 +10,12 @@ public partial class DownloadManagementService
     {
         foreach (var (infoHash, manager) in managers)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await WatchTorrent(infoHash, manager, cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "Unexpected error when watching torrent for {InfoHash}: {Reason}", infoHash, ex.Message);
             }
@@ -34,7 +35,6 @@ public partial class DownloadManagementService
             case TorrentState.FetchingHashes:
             case TorrentState.Hashing:
             case TorrentState.Starting:
-                logger.LogInformation("Torrent {InfoHash} is in state {State}", infoHash, manager.State);
                 tracker = tracker with { Status = DownloadStatus.InitializingTorrent };
                 break;
             case TorrentState.Downloading:
@@ -49,7 +49,7 @@ public partial class DownloadManagementService
                 tracker = tracker with { Status = DownloadStatus.StoppingTorrent };
                 break;
             case TorrentState.Stopped:
-                tracker = tracker with { Status = DownloadStatus.StoppedTorrent };
+                tracker = tracker with { Status = DownloadStatus.DownloadedTorrent };
                 break;
 
             case TorrentState.Error:
@@ -58,8 +58,8 @@ public partial class DownloadManagementService
         }
 
         trackers[infoHash] = tracker;
-        logger.LogInformation(
-            "Torrent {InfoHash} is {Status} at {PartialProgress}% (target: {TargetProgress}%, total: {TotalProgress}%) at {BytesPerSecond}B/s with {Seeds} seeds",
+        logger.LogDebug(
+            "Torrent {InfoHash} is {Status} at {PartialProgress:0.0}% (target: {TargetProgress:0.0}%, total: {TotalProgress:0.0}%) at {BytesPerSecond}B/s with {Seeds} seeds",
             infoHash,
             tracker.Status,
             tracker.PartialProgressPercent,
@@ -71,17 +71,18 @@ public partial class DownloadManagementService
 
     private static DownloadTracker UpdateProgress(DownloadTracker tracker, TorrentManager manager)
     {
-        var files = manager.Files;
-        var targetFiles = files.Where(f => f.Priority != Priority.DoNotDownload).ToList();
-        var downloadedBytes = targetFiles.Sum(f => f.BytesDownloaded());
-        var targetBytes = targetFiles.Sum(f => f.Length);
-        var totalBytes = files.Sum(f => f.Length);
+        var files = manager.Files.Select(UpdateProgress).ToArray();
+        var targetFiles = files.Where(f => f.Priority != FilePriority.Skip).ToList();
+        var downloadedBytes = targetFiles.Sum(f => f.DownloadedBytes);
+        var targetBytes = targetFiles.Sum(f => f.TotalBytes);
+        var totalBytes = files.Sum(f => f.TotalBytes);
 
         var partialProgressPercent = targetBytes == 0 ? 0 : 100.0 * downloadedBytes / targetBytes;
         var targetProgressPercent = targetBytes == 0 ? 0 : 100.0 * targetBytes / totalBytes;
         var totalProgressPercent = totalBytes == 0 ? 0 : 100.0 * downloadedBytes / totalBytes;
 
         return tracker with {
+            Files = files,
             DownloadedBytes = downloadedBytes,
             TargetBytes = targetBytes,
             TotalBytes = totalBytes,
@@ -90,5 +91,25 @@ public partial class DownloadManagementService
             TotalProgressPercent = totalProgressPercent,
             BytesPerSecond = manager.Monitor.DownloadRate,
         };
+    }
+
+    private static FileTracker UpdateProgress(ITorrentManagerFile file)
+    {
+        return new FileTracker(
+            file.Path,
+            file.Priority switch
+            {
+                Priority.DoNotDownload => FilePriority.Skip,
+                Priority.Lowest => FilePriority.Low,
+                Priority.Low => FilePriority.Low,
+                Priority.Normal => FilePriority.Normal,
+                Priority.High => FilePriority.High,
+                Priority.Highest => FilePriority.High,
+                Priority.Immediate => FilePriority.High,
+                _ => FilePriority.Normal,
+            },
+            file.BytesDownloaded(),
+            file.Length,
+            file.Length == 0 ? 0 : 100.0 * file.BytesDownloaded() / file.Length);
     }
 }

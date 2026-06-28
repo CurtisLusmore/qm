@@ -6,11 +6,20 @@ import type {
   DownloadTracker,
   Movie,
   Series,
+  ServerCollection,
   ServerEvent,
   Title,
   TitleSummary,
 } from '../types';
-import { createServerEventSource, KeyValueStorePromise } from '../clients';
+import {
+  addMovieToServerCollection,
+  addSeriesToServerCollection,
+  createServerEventSource,
+  getServerCollection,
+  KeyValueStorePromise,
+  removeMovieFromServerCollection,
+  removeSeriesFromServerCollection,
+} from '../clients';
 
 export const CollectionContext = createContext<Collection>({} as Collection);
 
@@ -156,7 +165,28 @@ function reduce(state: State, action: Action): State {
 
 export function createCollectionContext(): Collection {
   const [ state, dispatch ] = useReducer(reduce, initialState);
+  const [ serverState, setServerState ] = useState<ServerCollection>({ movies: [] as CollectionStatus<Movie>[], series: [] as CollectionStatus<Series>[] });
   const [ downloads, setDownloads ] = useState<DownloadTracker[]>([]);
+
+  useEffect(() => {
+    (async function () {
+      const collection = await getServerCollection();
+      setServerState(collection);
+      console.log(collection);
+    }());
+  }, []);
+
+  useEffect(() => {
+    for (const movie of serverState.movies) {
+      if (!get(movie.id)) add(movie);
+    }
+  }, [ serverState.movies ]);
+
+  useEffect(() => {
+    for (const series of serverState.series) {
+      if (!get(series.id)) add(series);
+    }
+  }, [ serverState.series ]);
 
   useEffect(() => {
     (async function initialize() {
@@ -199,14 +229,24 @@ export function createCollectionContext(): Collection {
       watched: false,
       downloadStatus: 'not_downloaded',
     };
-    dispatch({ type: 'add', title: collectionItem });
     await state.store!.put(title.type, title.id, collectionItem);
+    await (title.type === 'movie'
+      ? addMovieToServerCollection(title as Movie)
+      : addSeriesToServerCollection(title as Series)
+    );
+    dispatch({ type: 'add', title: collectionItem });
   };
 
   async function remove(titleId: string): Promise<void> {
-    dispatch({ type: 'remove', titleId });
     const title = get(titleId);
-    if (title) await state.store!.remove(title.type, titleId);
+    if (title) {
+      await state.store!.remove(title.type, titleId);
+      await (title.type === 'movie'
+        ? removeMovieFromServerCollection(titleId)
+        : removeSeriesFromServerCollection(titleId)
+    );
+    }
+    dispatch({ type: 'remove', titleId });
   };
 
   async function markWatched(titleId: string): Promise<void> {

@@ -1,5 +1,6 @@
 using be.Interfaces;
 using be.Shared;
+using System.Text.Json;
 
 namespace be.HostedServices;
 
@@ -10,7 +11,10 @@ public partial class DownloadManagementService : IDownloadSaver
         infoHash = infoHash.ToUpperInvariant();
         try
         {
-            await keyValueStore.PutAsync("torrents/titles", infoHash, title);
+            var filename = TitleFile(infoHash);
+            using var writer = File.CreateText($"{filename}.tmp");
+            await writer.WriteAsync(JsonSerializer.Serialize(title));
+            File.Move($"{filename}.tmp", filename, true);
             logger.LogInformation("Saved tracker for {InfoHash}: {Name}", infoHash, title.Name);
         }
         catch (Exception ex)

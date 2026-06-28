@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace be.ListDownloads;
+namespace be.GetCollection;
 
 [ApiController]
-public class ListDownloadsController(ListDownloadsService service) : ControllerBase
+public class GetCollectionController(GetCollectionService service): ControllerBase
 {
-    [HttpGet("downloads")]
-    public async Task<IActionResult> ListDownloadsAsync()
+    [HttpGet("collection")]
+    public async Task<IActionResult> GetCollectionAsync()
     {
         try
         {
-            var result = await service.ListDownloadsAsync();
+            var result = await service.GetCollectionAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Value)
                 : StatusCode(result.StatusCode, result.Error);

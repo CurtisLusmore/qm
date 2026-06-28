@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace be.Search;
 
 [ApiController]
-[Route("")]
 public class SearchController(SearchService service) : ControllerBase
 {
     [HttpGet("search")]

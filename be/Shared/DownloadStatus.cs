@@ -14,8 +14,10 @@ public enum DownloadStatus
     InitializingTorrent,
     DownloadingTorrent,
     PausedTorrent,
-    DownloadedTorrent,
-    StoppingTorrent,
-    StoppedTorrent,
     DownloadTorrentFailed,
+    StoppingTorrent,
+    DownloadedTorrent,
+    SortingFiles,
+    ManualSortingRequired,
+    Completed
 }

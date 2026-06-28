@@ -10,6 +10,7 @@ import {
   DialogActions,
   Skeleton,
   Typography,
+  IconButton,
 } from '@mui/material';
 import {
   Close,
@@ -54,9 +55,21 @@ export default function DownloadSearch({ title, open, onClose }: {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Search for "{title.name}"
-        <Button onClick={onClose} color="inherit" startIcon={<Close />} sx={{ position: 'absolute', right: 8, top: 8 }} />
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      sx={{
+        '& .MuiDialog-paper': {
+          bgcolor: 'background.default',
+        },
+      }}
+    >
+      <DialogTitle>Search for "{title.name} ({title.year})"
+        <IconButton onClick={onClose} color="inherit" sx={{ position: 'absolute', right: 8, top: 8 }}>
+          <Close />
+        </IconButton>
       </DialogTitle>
       <DialogContent>
         {!loaded && (
@@ -78,7 +91,7 @@ export default function DownloadSearch({ title, open, onClose }: {
             <Card key={result.infoHash} variant="outlined" sx={{ mb: 2 }}>
               <CardHeader
                 title={result.name}
-                subheader={`${formatSize(result.sizeBytes)} \u00A0\u2022\u00A0 ${result.seeders} seeders`}
+                subheader={`${formatBytes(result.sizeBytes)} \u00A0\u2022\u00A0 ${result.seeders} seeders`}
               />
               <CardActions>
                 <Button onClick={() => handleClickDownload(result.infoHash)} color="primary">Download</Button>
@@ -87,16 +100,14 @@ export default function DownloadSearch({ title, open, onClose }: {
           ))
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary">Close</Button>
-      </DialogActions>
     </Dialog>
   );
 };
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0B';
+  const k = 1000;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
 };

@@ -5,6 +5,7 @@ public record DownloadTracker(
     MovieOrSeries Title,
     DownloadStatus Status = DownloadStatus.Received,
     string? Error = null,
+    FileTracker[]? Files = null,
     long DownloadedBytes = 0,
     long TargetBytes = 0,
     long TotalBytes = 0,

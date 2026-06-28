@@ -15,7 +15,8 @@ public record Movie(
     Ratings Ratings,
     PersonSummary[] Cast,
     PersonSummary[] Directors,
-    PersonSummary[] Writers)
+    PersonSummary[] Writers,
+    bool Downloaded = false)
 : Title(
     Id,
     Type,
@@ -31,4 +32,5 @@ public record Movie(
     Ratings,
     Cast,
     Directors,
-    Writers);
+    Writers,
+    Downloaded);

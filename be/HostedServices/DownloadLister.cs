@@ -7,7 +7,7 @@ namespace be.HostedServices;
 public partial class DownloadManagementService : IDownloadLister
 {
     public IEnumerator<DownloadTracker> GetEnumerator()
-        => trackers.Values.GetEnumerator();
+        => trackers.Values.OrderBy(t => $"{t.Title.Name} ({t.Title.Year}) {t.InfoHash}").GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator()
         => GetEnumerator();

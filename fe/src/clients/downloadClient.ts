@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import type { DownloadSearchResult, DownloadTracker, Title } from '../types';
+import type { DownloadSearchResult, Title } from '../types';
 
 export async function searchDownloads(title: Title): Promise<DownloadSearchResult[]> {
   const query = `${title.name} ${title.year ?? ''}`.trim();

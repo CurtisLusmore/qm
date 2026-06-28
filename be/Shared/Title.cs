@@ -1,7 +1,7 @@
 namespace be.Shared;
 
 public record Ratings(
-    decimal Rating,
+    decimal? Rating,
     int Count);
 
 public record Title(
@@ -19,4 +19,5 @@ public record Title(
     Ratings Ratings,
     PersonSummary[] Cast,
     PersonSummary[] Directors,
-    PersonSummary[] Writers);
+    PersonSummary[] Writers,
+    bool Downloaded = false);

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace be.SaveDownload;
 
 [ApiController]
-[Route("")]
 public class SaveDownloadController(SaveDownloadService service) : ControllerBase
 {
     [HttpPost("downloads")]

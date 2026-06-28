@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -8,7 +8,6 @@ import {
   Divider,
   Skeleton,
   Stack,
-  Button,
 } from '@mui/material';
 import {
   BookmarkAdd,
@@ -20,7 +19,6 @@ import {
 } from '@mui/icons-material';
 import { DownloadSearch } from '.';
 import type { CollectionStatus, Title } from '../types';
-import { useDispatchToast } from '../hooks';
 
 export default function TitleCard({ children, title, addToCollection, markWatched }: {
   children?: React.ReactNode,
@@ -43,7 +41,6 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
   addToCollection: (title: CollectionStatus<Title>) => void,
   markWatched: (titleId: string) => void
 }): React.ReactElement {
-  const dispatchToast = useDispatchToast();
   const [ downloadSearchOpen, setDownloadSearchOpen ] = useState(false);
   const lastWatched = title.watched && title.lastWatched ? getRelativeDateText(title.lastWatched) : null;
   const subheaders = [
@@ -61,6 +58,17 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
     title.inCollection && title.downloadStatus === 'downloading' && <Chip key="downloading" icon={<Downloading />} label="Downloading" />,
     title.inCollection && title.downloadStatus === 'downloaded' && <Chip key="downloaded" icon={<DownloadDone />} label="Downloaded" />,
   ];
+
+  const [ videoUrl, setVideoUrl ] = useState<string | undefined>(title.trailerUrl);
+
+  useEffect(() => {
+    (async function () {
+      const resp = await fetch(`http://localhost:5138/movies/${title.id}/media`, { method: 'HEAD' });
+      if (resp.ok) {
+        setVideoUrl(`http://localhost:5138/movies/${title.id}/media`);
+      }
+    }());
+  }, []);
 
   return (
     <>
@@ -83,7 +91,7 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
           />
           <CardMedia
             component="video"
-            src={title.trailerUrl}
+            src={videoUrl}
             controls
             sx={{ height: 300, objectFit: 'cover' }}
           />

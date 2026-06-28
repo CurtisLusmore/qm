@@ -34,6 +34,7 @@ export type DownloadTracker = {
   title: Title;
   status: DownloadTrackerStatus;
   error?: string;
+  files?: FileTracker[];
   downloadedBytes: number;
   targetBytes: number;
   totalBytes: number;
@@ -54,20 +55,41 @@ export type DownloadTrackerStatus =
   | 'InitializingTorrent'
   | 'DownloadingTorrent'
   | 'PausedTorrent'
-  | 'DownloadedTorrent'
+  | 'DownloadTorrentFailed'
   | 'StoppingTorrent'
-  | 'StoppedTorrent'
-  | 'DownloadTorrentFailed';
+  | 'DownloadedTorrent'
+  | 'SortingFiles'
+  | 'ManualSortingRequired'
+  | 'Completed';
 
 export type Episode = Title & {
   seasonNumber: number;
   episodeNumber: number;
 }
 
+export type FilePriority =
+  | 'Skip'
+  | 'Low'
+  | 'Normal'
+  | 'High';
+
+export type FileTracker = {
+  path: string;
+  priority: FilePriority;
+  downloadedBytes: number;
+  totalBytes: number;
+  progressPercent: number;
+}
+
 export type Movie = Title;
 
 export type Series = Title & {
   episodes: Episode[];
+}
+
+export interface ServerCollection {
+  movies: CollectionStatus<Movie>[];
+  series: CollectionStatus<Series>[];
 }
 
 export type TitleType =

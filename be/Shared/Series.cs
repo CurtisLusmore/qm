@@ -16,7 +16,8 @@ public record Series(
     PersonSummary[] Cast,
     PersonSummary[] Directors,
     PersonSummary[] Writers,
-    Episode[] Episodes)
+    Episode[] Episodes,
+    bool Downloaded = false)
 : Title(
     Id,
     Type,
@@ -32,4 +33,5 @@ public record Series(
     Ratings,
     Cast,
     Directors,
-    Writers);
+    Writers,
+    Downloaded);
