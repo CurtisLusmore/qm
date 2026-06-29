@@ -16,7 +16,8 @@ public record Movie(
     PersonSummary[] Cast,
     PersonSummary[] Directors,
     PersonSummary[] Writers,
-    bool Downloaded = false)
+    bool Downloaded = false,
+    MediaFile? MediaFile = null)
 : Title(
     Id,
     Type,

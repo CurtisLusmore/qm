@@ -32,12 +32,12 @@ import {
   PauseCircle,
   Pending,
 } from '@mui/icons-material';
-import { useCollection, useWakeLock } from '../hooks';
+import { useDownloads, useWakeLock } from '../hooks';
 import type { DownloadTracker, DownloadTrackerStatus, FileTracker } from '../types';
 
 export default function DownloadTracker(): React.ReactElement {
   const [ open, setOpen ] = useState(false);
-  const { downloads } = useCollection();
+  const downloads = useDownloads();
   const { isLocked, requestWakeLock, releaseWakeLock } = useWakeLock();
 
   function handleClickOpen() {

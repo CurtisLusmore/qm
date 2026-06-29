@@ -18,7 +18,8 @@ public record Episode(
     PersonSummary[] Writers,
     int SeasonNumber,
     int EpisodeNumber,
-    bool Downloaded = false)
+    bool Downloaded = false,
+    MediaFile? MediaFile = null)
 : Title(
     Id,
     Type,

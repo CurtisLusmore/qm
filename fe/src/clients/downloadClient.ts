@@ -1,7 +1,7 @@
 import type { DownloadSearchResult, Title } from '../types';
 
-export async function searchDownloads(title: Title): Promise<DownloadSearchResult[]> {
-  const query = `${title.name} ${title.year ?? ''}`.trim();
+export async function searchDownloads(searchTerm: string): Promise<DownloadSearchResult[]> {
+  const query = searchTerm.trim();
   const response = await fetch(`http://localhost:5138/search?query=${query}`);
   if (!response.ok) {
     throw new Error(`Search request failed with status ${response.status}`);

@@ -7,28 +7,33 @@ import {
   Skeleton,
   Stack,
 } from '@mui/material';
+import {
+  DownloadDone,
+} from '@mui/icons-material';
 import { getTitle } from '../clients';
 import { TitleCard } from '../components';
 import { useCollection } from '../hooks';
-import type { CollectionStatus, Episode, Series } from '../types';
+import type { Episode, Series } from '../types';
 
 export default function Series({ id }: { id: string }) {
   const collection = useCollection();
-  const [ title, setTitle ] = useState<CollectionStatus<Series> | undefined>(undefined);
+  const [ title, setTitle ] = useState<Series | undefined>(undefined);
   const [ episodesLoaded, setEpisodesLoaded ] = useState(false);
+
+  console.log(title);
 
   useEffect(() => {
     (async function () {
-      let title = collection.get(id!) as CollectionStatus<Series> | undefined;
+      let title = collection.get(id!) as Series | undefined;
       if (title) {
         setTitle(title);
         setEpisodesLoaded(true);
       }
 
-      title = collection.check(await getTitle(id!, false)) as CollectionStatus<Series>;
+      title = collection.check(await getTitle(id!, false)) as Series;
       setTitle(title);
 
-      title = collection.check(await getTitle(id!, true)) as CollectionStatus<Series>;
+      title = collection.check(await getTitle(id!, true)) as Series;
       setTitle(title);
       setEpisodesLoaded(true);
     }());
@@ -50,10 +55,11 @@ export default function Series({ id }: { id: string }) {
 
 function EpisodeSection({ episode }: { episode: Episode }) {
   const subheaders = [
-    `S${leftPad(episode.seasonNumber, 2)}E${leftPad(episode.episodeNumber, 2)}`,
-    episode.runtimeSeconds !== undefined ? `${Math.floor(episode.runtimeSeconds / 60)} min` : '',
-    `${episode.ratings.rating}/10 (${formatLargeNumber(episode.ratings.count)} votes)`,
-  ].filter(Boolean).join('\u00A0\u2022\u00A0');
+    <span>S{leftPad(episode.seasonNumber, 2)}E{leftPad(episode.episodeNumber, 2)}</span>,
+    episode.runtimeSeconds !== undefined ? <span>{`${Math.floor(episode.runtimeSeconds / 60)} min`}</span> : '',
+    <span>{`${episode.ratings.rating}/10 (${formatLargeNumber(episode.ratings.count)} votes)`}</span>,
+    episode.downloaded ? <><DownloadDone fontSize="small" />&nbsp;Downloaded</> : '',
+  ].filter(Boolean);
   return (
     <Stack direction="row" spacing={1} sx={{ padding: 1 }}>
       <CardMedia
@@ -65,7 +71,7 @@ function EpisodeSection({ episode }: { episode: Episode }) {
       <CardContent sx={{ py: 0 }}>
         <CardHeader
           title={episode.name}
-          subheader={<>{subheaders}</>}
+          subheader={<Stack direction="row" spacing={1} divider={<span>&bull;</span>}>{subheaders}</Stack>}
           sx={{ padding: 0 }}
         />
         {episode.plot}

@@ -1,5 +1,6 @@
 export { default as CollectionContextProvider } from './CollectionContextProvider';
 export { default as DownloadTracker } from './DownloadTracker';
+export { default as DownloadsContextProvider } from './DownloadsContextProvider';
 export { default as DownloadSearch } from './DownloadSearch';
 export { default as Movie } from './Movie';
 export { default as MoviesList } from './MoviesList';

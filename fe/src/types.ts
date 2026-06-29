@@ -3,24 +3,21 @@ export interface Collection {
   movies: Title[];
   series: Title[];
   recentlyAdded: Title[];
-  downloads: DownloadTracker[];
-  get(titleId: string): CollectionStatus<Title> | undefined;
+  get(titleId: string): Title | undefined;
   add(title: Title): Promise<void>;
   remove(titleId: string): Promise<void>;
   markWatched(titleId: string): Promise<void>;
-  check<T extends TitleSummary>(searchResults: T[]): CollectionStatus<T>[];
-  check<T extends TitleSummary>(searchResult: T): CollectionStatus<T>;
+  check<T extends TitleSummary>(searchResults: T[]): (T & CollectionStatus)[];
+  check<T extends TitleSummary>(searchResult: T): T & CollectionStatus;
 }
 
-export type CollectionStatus<T> = T & {
-  inCollection: boolean;
+export type CollectionStatus = {
+  inCollection?: boolean;
   addedOn?: Date;
-  watched: boolean;
+  watched?: boolean;
   lastWatched?: Date;
-  downloadStatus: DownloadStatus;
+  downloaded?: boolean;
 }
-
-export type DownloadStatus = 'not_downloaded' | 'downloading' | 'downloaded';
 
 export type DownloadSearchResult = {
   infoHash: string;
@@ -88,8 +85,8 @@ export type Series = Title & {
 }
 
 export interface ServerCollection {
-  movies: CollectionStatus<Movie>[];
-  series: CollectionStatus<Series>[];
+  movies: Movie[];
+  series: Series[];
 }
 
 export type TitleType =
@@ -114,7 +111,7 @@ export type ServerEvent = {
   downloads: DownloadTracker[];
 }
 
-export type Title = TitleSummary & {
+export type Title = TitleSummary & CollectionStatus & {
   endYear?: number;
   releaseDate?: Date;
   plot: string;

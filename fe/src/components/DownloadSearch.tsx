@@ -7,8 +7,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Skeleton,
+  TextField,
   Typography,
   IconButton,
 } from '@mui/material';
@@ -16,7 +16,7 @@ import {
   Close,
 } from '@mui/icons-material';
 import { searchDownloads, startDownload } from '../clients';
-import { useDispatchToast } from '../hooks';
+import { useDebounced, useDispatchToast } from '../hooks';
 import type { DownloadSearchResult, Title } from '../types';
 
 export default function DownloadSearch({ title, open, onClose }: {
@@ -24,16 +24,19 @@ export default function DownloadSearch({ title, open, onClose }: {
   open: boolean,
   onClose: () => void
 }): React.ReactElement {
+  const [ searchTerm, setSearchTerm ] = useState(`${title.name} (${title.year})`);
   const [ searchResults, setSearchResults ] = useState([] as DownloadSearchResult[]);
   const [ loaded, setLoaded ] = useState(false);
   const dispatchToast = useDispatchToast();
+  const debouncedSearchDownloads = useDebounced(searchDownloads, 200);
 
   useEffect(() => {
     if (!open) return;
 
     (async function () {
       try {
-        const results = await searchDownloads(title);
+        setLoaded(false);
+        const results = await debouncedSearchDownloads(searchTerm);
         setSearchResults(results);
         setLoaded(true);
       } catch (error) {
@@ -41,23 +44,30 @@ export default function DownloadSearch({ title, open, onClose }: {
         dispatchToast(`Failed to fetch search results: ${error}`, 'error');
       }
     }());
-  }, [ title, open ]);
+  }, [ title, open, searchTerm ]);
 
   async function handleClickDownload(infoHash: string) {
     try {
       await startDownload(infoHash, title);
       dispatchToast('Download started successfully', 'success');
-      onClose();
+      handleClose();
     } catch (error) {
       console.error(error);
       dispatchToast(`Failed to start download: ${error}`, 'error');
     }
   }
 
+  function handleClose() {
+    setSearchTerm(`${title.name} (${title.year})`);
+    setSearchResults([]);
+    setLoaded(false);
+    onClose();
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="md"
       sx={{
@@ -66,12 +76,20 @@ export default function DownloadSearch({ title, open, onClose }: {
         },
       }}
     >
-      <DialogTitle>Search for "{title.name} ({title.year})"
-        <IconButton onClick={onClose} color="inherit" sx={{ position: 'absolute', right: 8, top: 8 }}>
+      <DialogTitle>Download Search
+        <IconButton onClick={handleClose} color="inherit" sx={{ position: 'absolute', right: 8, top: 8 }}>
           <Close />
         </IconButton>
       </DialogTitle>
       <DialogContent>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder={`${title.name} (${title.year})`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ mb: 2 }}
+        />
         {!loaded && (
           [1, 2, 3].map((_, index) => (
             <Card key={index} variant="outlined" sx={{ mb: 2 }}>

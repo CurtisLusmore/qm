@@ -14,10 +14,11 @@ import {
 } from '@mui/material';
 import {
   CollectionContextProvider,
+  DownloadsContextProvider,
   DownloadTracker,
-  ToastsContextProvider,
   NavigationTabs,
   ThemeSwitcher,
+  ToastsContextProvider,
 } from './components';
 import {
   Home,
@@ -25,7 +26,7 @@ import {
   Playlist,
   Series,
 } from './pages';
-import { createCollectionContext } from './contexts';
+import { createCollectionContext, createDownloadsContext } from './contexts';
 
 const lightTheme = createTheme({
   palette: {
@@ -86,7 +87,9 @@ function RootLayout(): React.ReactElement {
             { collection.loaded && <Outlet /> }
             <ScrollRestoration />
           </Container>
-          <DownloadTracker />
+          <DownloadsContextProvider value={createDownloadsContext()}>
+            <DownloadTracker />
+          </DownloadsContextProvider>
         </ToastsContextProvider>
       </CollectionContextProvider>
     </ThemeProvider>

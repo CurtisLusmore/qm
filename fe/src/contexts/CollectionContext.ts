@@ -1,20 +1,16 @@
-import { createContext, useEffect, useReducer, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import type { KeyValueStore } from '@fifteenthstandard/storage';
 import type {
   Collection,
-  CollectionStatus,
-  DownloadTracker,
   Movie,
   Series,
   ServerCollection,
-  ServerEvent,
   Title,
   TitleSummary,
 } from '../types';
 import {
   addMovieToServerCollection,
   addSeriesToServerCollection,
-  createServerEventSource,
   getServerCollection,
   KeyValueStorePromise,
   removeMovieFromServerCollection,
@@ -26,27 +22,27 @@ export const CollectionContext = createContext<Collection>({} as Collection);
 type State = {
   loaded: boolean;
   store: KeyValueStore | undefined;
-  movies: CollectionStatus<Movie>[];
-  series: CollectionStatus<Series>[];
+  movies: Movie[];
+  series: Series[];
 };
 
 const initialState = {
   loaded: false,
   store: undefined,
-  movies: [] as CollectionStatus<Movie>[],
-  series: [] as CollectionStatus<Series>[],
+  movies: [] as Movie[],
+  series: [] as Series[],
 };
 
 type InitializeAction = {
   type: 'initialize';
   store: KeyValueStore | undefined;
-  movies: CollectionStatus<Movie>[];
-  series: CollectionStatus<Series>[];
+  movies: Movie[];
+  series: Series[];
 };
 
 type AddAction = {
   type: 'add';
-  title: CollectionStatus<Title>;
+  title: Title;
 };
 
 type RemoveAction = {
@@ -56,7 +52,7 @@ type RemoveAction = {
 
 type UpdateAction = {
   type: 'update';
-  title: CollectionStatus<Title>;
+  title: Title;
 };
 
 type Action =
@@ -65,11 +61,11 @@ type Action =
   | RemoveAction
   | UpdateAction;
 
-function sorted<T extends Title>(items: CollectionStatus<T>[]): CollectionStatus<T>[] {
+function sorted<T extends Title>(items: T[]): T[] {
   return items.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-function initialize(state: State, store: KeyValueStore | undefined, movies: CollectionStatus<Movie>[], series: CollectionStatus<Series>[]): State {
+function initialize(state: State, store: KeyValueStore | undefined, movies: Movie[], series: Series[]): State {
   const newState = {
     ...state,
     loaded: true,
@@ -80,18 +76,18 @@ function initialize(state: State, store: KeyValueStore | undefined, movies: Coll
   return newState;
 };
 
-function addTitle(state: State, title: CollectionStatus<Title>): State {
+function addTitle(state: State, title: Title): State {
   switch (title.type) {
     case 'movie':
       return {
         ...state,
-        movies: sorted([...state.movies, title as CollectionStatus<Movie>]),
+        movies: sorted([...state.movies, title as Movie]),
       };
 
     case 'series':
       return {
         ...state,
-        series: sorted([...state.series, title as CollectionStatus<Series>]),
+        series: sorted([...state.series, title as Series]),
       };
 
     default:
@@ -117,18 +113,18 @@ function removeTitle(state: State, titleId: string): State {
   }
 };
 
-function update(state: State, title: CollectionStatus<Title>): State {
+function update(state: State, title: Title): State {
   switch (title.type) {
     case 'movie':
       return {
         ...state,
-        movies: sorted([...state.movies, title as CollectionStatus<Movie>]),
+        movies: sorted([...state.movies, title as Movie]),
       };
 
     case 'series':
       return {
         ...state,
-        series: sorted([...state.series, title as CollectionStatus<Series>]),
+        series: sorted([...state.series, title as Series]),
       };
 
     default:
@@ -165,26 +161,24 @@ function reduce(state: State, action: Action): State {
 
 export function createCollectionContext(): Collection {
   const [ state, dispatch ] = useReducer(reduce, initialState);
-  const [ serverState, setServerState ] = useState<ServerCollection>({ movies: [] as CollectionStatus<Movie>[], series: [] as CollectionStatus<Series>[] });
-  const [ downloads, setDownloads ] = useState<DownloadTracker[]>([]);
+  const [ serverState, setServerState ] = useState<ServerCollection>({ movies: [] as Movie[], series: [] as Series[] });
 
   useEffect(() => {
     (async function () {
       const collection = await getServerCollection();
       setServerState(collection);
-      console.log(collection);
     }());
   }, []);
 
   useEffect(() => {
     for (const movie of serverState.movies) {
-      if (!get(movie.id)) add(movie);
+      updateFromServer(movie);
     }
   }, [ serverState.movies ]);
 
   useEffect(() => {
     for (const series of serverState.series) {
-      if (!get(series.id)) add(series);
+      updateFromServer(series);
     }
   }, [ serverState.series ]);
 
@@ -192,28 +186,19 @@ export function createCollectionContext(): Collection {
     (async function initialize() {
       const store = await KeyValueStorePromise;
       const [ movies, series ] = await Promise.all([
-        store.list<CollectionStatus<Movie>>('movie').all() as Promise<CollectionStatus<Movie>[]>,
-        store.list<CollectionStatus<Series>>('series').all() as Promise<CollectionStatus<Series>[]>,
+        store.list<Movie>('Movie').all() as Promise<Movie[]>,
+        store.list<Series>('Series').all() as Promise<Series[]>,
       ]);
       dispatch({ type: 'initialize', store, movies, series });
     }());
   }, []);
 
-  useEffect(() => {
-      const eventSource = createServerEventSource();
-      eventSource.onmessage = event => {
-        const data = JSON.parse(event.data) as ServerEvent;
-        const { downloads } = data;
-        setDownloads(downloads);
-      }
-  }, []);
-
-  const recentlyAdded = [ ...state.movies, ...state.series ]
+  const recentlyAdded = useMemo(() => [ ...state.movies, ...state.series ]
     .filter(item => item.addedOn !== undefined)
     .toSorted((a, b) => b.addedOn!.getTime() - a.addedOn!.getTime())
-    .slice(0, 10);
+    .slice(0, 10), [ state.movies, state.series ]);
 
-  function get(titleId: string): CollectionStatus<Title> | undefined {
+  function get(titleId: string): Title | undefined {
     const movie = state.movies.find(item => item.id === titleId);
     if (movie) return movie;
     const series = state.series.find(item => item.id === titleId);
@@ -222,12 +207,13 @@ export function createCollectionContext(): Collection {
   };
 
   async function add(title: Title): Promise<void> {
-    const collectionItem: CollectionStatus<Title> = {
+    const collectionItem: Title = {
       ...title,
       inCollection: true,
       addedOn: new Date(),
       watched: false,
-      downloadStatus: 'not_downloaded',
+      lastWatched: undefined,
+      downloaded: false,
     };
     await state.store!.put(title.type, title.id, collectionItem);
     await (title.type === 'movie'
@@ -235,6 +221,19 @@ export function createCollectionContext(): Collection {
       : addSeriesToServerCollection(title as Series)
     );
     dispatch({ type: 'add', title: collectionItem });
+  };
+
+  async function updateFromServer(title: Title): Promise<void> {
+    title = {
+      inCollection: true,
+      addedOn: new Date(),
+      watched: false,
+      lastWatched: undefined,
+      downloaded: false,
+      ...title,
+    };
+    await state.store!.put(title.type, title.id, title);
+    dispatch({ type: 'update', title });
   };
 
   async function remove(titleId: string): Promise<void> {
@@ -266,24 +265,31 @@ export function createCollectionContext(): Collection {
       ? searchResults.map(checkOne)
       : checkOne(searchResults);
 
-    function checkOne(searchResult: T): CollectionStatus<T> {
+    function checkOne(searchResult: T): T {
       const title = get(searchResult.id);
       return title === undefined
-        ? { ...searchResult, inCollection: false, downloadStatus: 'not_downloaded' } as CollectionStatus<T>
-        : { ...title, ...searchResult } as CollectionStatus<T>;
+        ? { ...searchResult, inCollection: false, addedOn: undefined, watched: false, lastWatched: undefined, downloaded: false } as T
+        : { ...searchResult, ...title } as T;
     }
   };
 
-  return {
+  const getMemoized = useCallback(get, [ state.movies, state.series ]);
+  const addMemoized = useCallback(add, [ state.store ]);
+  const removeMemoized = useCallback(remove, [ state.store ]);
+  const markWatchedMemoized = useCallback(markWatched, [ state.store ]);
+  const checkMemoized = useCallback(check, [ state.movies, state.series ]);
+
+  const contextValue = useMemo(() => ({
     loaded: state.loaded,
     movies: state.movies,
     series: state.series,
     recentlyAdded,
-    downloads,
-    get,
-    add,
-    remove,
-    markWatched,
-    check,
-  };
+    get: getMemoized,
+    add: addMemoized,
+    remove: removeMemoized,
+    markWatched: markWatchedMemoized,
+    check: checkMemoized,
+  }), [ state.loaded, state.movies, state.series, recentlyAdded ]);
+
+  return contextValue;
 };

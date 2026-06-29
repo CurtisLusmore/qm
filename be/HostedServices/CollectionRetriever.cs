@@ -31,7 +31,7 @@ public partial class DownloadManagementService : ICollectionRetriever
                 var mediaFile = GetMovieMediaFile(movie.Id);
                 if (mediaFile != null)
                 {
-                    movie = movie with { Downloaded = true };
+                    movie = movie with { Downloaded = true, MediaFile = mediaFile };
                 }
                 movies.Add(movie);
             }
@@ -63,7 +63,7 @@ public partial class DownloadManagementService : ICollectionRetriever
                     var mediaFile = GetEpisodeMediaFile(series.Id, episode.SeasonNumber, episode.EpisodeNumber);
                     if (mediaFile != null)
                     {
-                        newEpisode = episode with { Downloaded = true };
+                        newEpisode = episode with { Downloaded = true, MediaFile = mediaFile };
                     }
                     episodes.Add(newEpisode);
                 }

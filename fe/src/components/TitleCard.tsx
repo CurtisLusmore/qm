@@ -13,17 +13,16 @@ import {
   BookmarkAdd,
   Download,
   DownloadDone,
-  Downloading,
   Visibility,
   VisibilityOutlined,
 } from '@mui/icons-material';
 import { DownloadSearch } from '.';
-import type { CollectionStatus, Title } from '../types';
+import type { Title } from '../types';
 
 export default function TitleCard({ children, title, addToCollection, markWatched }: {
   children?: React.ReactNode,
-  title: CollectionStatus<Title> | undefined,
-  addToCollection: (title: CollectionStatus<Title>) => void,
+  title: Title | undefined,
+  addToCollection: (title: Title) => void,
   markWatched: (titleId: string) => void
 }): React.ReactElement {
   return title === undefined ? (
@@ -37,8 +36,8 @@ export default function TitleCard({ children, title, addToCollection, markWatche
 
 function TitleCardInner({ children, title, addToCollection, markWatched }: {
   children?: React.ReactNode,
-  title: CollectionStatus<Title>,
-  addToCollection: (title: CollectionStatus<Title>) => void,
+  title: Title,
+  addToCollection: (title: Title) => void,
   markWatched: (titleId: string) => void
 }): React.ReactElement {
   const [ downloadSearchOpen, setDownloadSearchOpen ] = useState(false);
@@ -50,13 +49,13 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
     `${title.ratings.rating}/10 (${formatLargeNumber(title.ratings.count)} votes)`,
   ].filter(Boolean).join('\u00A0\u00A0\u2022\u00A0\u00A0');
 
+
   const chips = [
     !title.inCollection && <Chip key="add" icon={<BookmarkAdd />} label="Add to Collection" onClick={() => addToCollection(title)} />,
     title.inCollection && title.watched && title.lastWatched && <Chip key="watched" icon={<Visibility />} label={lastWatched} title={`Last watched ${lastWatched}`} />,
     title.inCollection && (!title.watched || !title.lastWatched) && <Chip key="mark" icon={<VisibilityOutlined />} label="Mark Watched" onClick={() => markWatched(title.id)} />,
-    title.inCollection && title.downloadStatus === 'not_downloaded' && <Chip key="download" icon={<Download />} label="Download" onClick={() => setDownloadSearchOpen(true)} />,
-    title.inCollection && title.downloadStatus === 'downloading' && <Chip key="downloading" icon={<Downloading />} label="Downloading" />,
-    title.inCollection && title.downloadStatus === 'downloaded' && <Chip key="downloaded" icon={<DownloadDone />} label="Downloaded" />,
+    title.inCollection && !title.downloaded && <Chip key="download" icon={<Download />} label="Download" onClick={() => setDownloadSearchOpen(true)} />,
+    title.inCollection && title.downloaded && <Chip key="downloaded" icon={<DownloadDone />} label="Downloaded" />,
   ];
 
   const [ videoUrl, setVideoUrl ] = useState<string | undefined>(title.trailerUrl);

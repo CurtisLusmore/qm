@@ -2,20 +2,20 @@ import { useEffect, useState } from 'react';
 import { getTitle } from '../clients';
 import { TitleCard } from '../components';
 import { useCollection } from '../hooks';
-import type { CollectionStatus, Movie } from '../types';
+import type { Movie } from '../types';
 
 export default function Movie({ id }: { id: string }) {
   const collection = useCollection();
-  const [ title, setTitle ] = useState<CollectionStatus<Movie> | undefined>(undefined);
+  const [ title, setTitle ] = useState<Movie | undefined>(undefined);
 
   useEffect(() => {
     (async function () {
-      let title = collection.get(id!) as CollectionStatus<Movie> | undefined;
+      let title = collection.get(id!) as Movie | undefined;
       if (title) {
         setTitle(title);
       }
 
-      title = collection.check(await getTitle(id!)) as CollectionStatus<Movie>;
+      title = collection.check(await getTitle(id!)) as Movie;
       setTitle(title);
     }());
   }, [ collection.movies, id ]);

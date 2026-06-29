@@ -32,7 +32,7 @@ export default function Search() {
   const [ searchTerm, setSearchTerm ] = useState('');
   const [ searchResults, setSearchResults ] = useState<TitleSummary[]>([]);
 
-  const results: CollectionStatus<TitleSummary>[] = useMemo(
+  const results: (TitleSummary & CollectionStatus)[] = useMemo(
     () => collection.check(searchResults),
     [ collection, searchResults ]
   );
@@ -132,7 +132,7 @@ export default function Search() {
       )}
       {hasResults &&(
         <ImageList cols={sm ? 1 : md ? 2 : 3} gap={8} rowHeight={400}>
-          {results?.map((item: CollectionStatus<TitleSummary>) => (
+          {results?.map((item: TitleSummary & CollectionStatus) => (
             <SearchResultItem
               key={item.id}
               item={item}
@@ -157,7 +157,7 @@ export default function Search() {
 };
 
 function SearchResultItem({ item, add, remove, getTitle, navigate }: {
-  item: CollectionStatus<TitleSummary>,
+  item: TitleSummary & CollectionStatus,
   add: (title: Title) => void,
   remove: (titleId: string) => void,
   getTitle: (titleId: string) => Promise<Title>,
