@@ -34,9 +34,11 @@ public partial class DownloadManagementService
             var url = $"https://itorrents.net/torrent/{infoHash}.torrent";
             try
             {
-                using var readStream = await httpClient.GetStreamAsync(url, cancellationToken);
-                using var writeStream = File.OpenWrite(tmpFilename);
-                await readStream.CopyToAsync(writeStream, cancellationToken);
+                using (var readStream = await httpClient.GetStreamAsync(url, cancellationToken))
+                using (var writeStream = File.OpenWrite(tmpFilename))
+                {
+                    await readStream.CopyToAsync(writeStream, cancellationToken);
+                }
                 File.Move(tmpFilename, targetFilename, true);
                 logger.LogInformation("Downloaded torrent file for {InfoHash}: {Name}", infoHash, tracker.Title.Name);
             }

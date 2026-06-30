@@ -1,5 +1,5 @@
 const CACHE = 'qm-v1';
-const SCOPE = '/qm/';
+const SCOPE = '/';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

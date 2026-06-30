@@ -69,9 +69,7 @@ const router = createBrowserRouter([
       }
     ],
   }
-], {
-  basename: '/qm/',
-});
+]);
 
 function RootLayout(): React.ReactElement {
   const [ theme, setTheme ] = useState<'light' | 'dark'>('dark');

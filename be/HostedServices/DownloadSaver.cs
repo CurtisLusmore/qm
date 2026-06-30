@@ -12,8 +12,10 @@ public partial class DownloadManagementService : IDownloadSaver
         try
         {
             var filename = TitleFile(infoHash);
-            using var writer = File.CreateText($"{filename}.tmp");
-            await writer.WriteAsync(JsonSerializer.Serialize(title));
+            using (var writer = File.CreateText($"{filename}.tmp"))
+            {
+                await writer.WriteAsync(JsonSerializer.Serialize(title));
+            }
             File.Move($"{filename}.tmp", filename, true);
             logger.LogInformation("Saved tracker for {InfoHash}: {Name}", infoHash, title.Name);
         }

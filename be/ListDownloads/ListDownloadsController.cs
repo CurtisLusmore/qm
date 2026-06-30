@@ -5,7 +5,7 @@ namespace be.ListDownloads;
 [ApiController]
 public class ListDownloadsController(ListDownloadsService service) : ControllerBase
 {
-    [HttpGet("downloads")]
+    [HttpGet("api/downloads")]
     public async Task<IActionResult> ListDownloadsAsync()
     {
         try

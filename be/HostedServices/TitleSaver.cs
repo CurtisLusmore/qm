@@ -11,8 +11,10 @@ public partial class DownloadManagementService : ITitleSaver
         try
         {
             var filename = MovieFile(title.Id);
-            using var writer = File.CreateText($"{filename}.tmp");
-            await writer.WriteAsync(JsonSerializer.Serialize(title));
+            using (var writer = File.CreateText($"{filename}.tmp"))
+            {
+                await writer.WriteAsync(JsonSerializer.Serialize(title));
+            }
             File.Move($"{filename}.tmp", filename, true);
             logger.LogInformation("Saved details for {TitleId}: {Name}", title.Id, title.Name);
         }
@@ -28,8 +30,10 @@ public partial class DownloadManagementService : ITitleSaver
         try
         {
             var filename = SeriesFile(title.Id);
-            using var writer = File.CreateText($"{filename}.tmp");
-            await writer.WriteAsync(JsonSerializer.Serialize(title));
+            using (var writer = File.CreateText($"{filename}.tmp"))
+            {
+                await writer.WriteAsync(JsonSerializer.Serialize(title));
+            }
             File.Move($"{filename}.tmp", filename, true);
             logger.LogInformation("Saved details for {TitleId}: {Name}", title.Id, title.Name);
         }

@@ -5,7 +5,7 @@ namespace be.RemoveTitle;
 [ApiController]
 public class RemoveTitleController(RemoveTitleService service) : ControllerBase
 {
-    [HttpDelete("movies/{titleId}")]
+    [HttpDelete("api/movies/{titleId}")]
     public async Task<IActionResult> RemoveMovieAsync([FromRoute] string titleId)
     {
         try
@@ -21,7 +21,7 @@ public class RemoveTitleController(RemoveTitleService service) : ControllerBase
         }
     }
 
-    [HttpDelete("series/{titleId}")]
+    [HttpDelete("api/series/{titleId}")]
     public async Task<IActionResult> RemoveSeriesAsync([FromRoute] string titleId)
     {
         try

@@ -5,7 +5,7 @@ namespace be.GetCollection;
 [ApiController]
 public class GetCollectionController(GetCollectionService service): ControllerBase
 {
-    [HttpGet("collection")]
+    [HttpGet("api/collection")]
     public async Task<IActionResult> GetCollectionAsync()
     {
         try

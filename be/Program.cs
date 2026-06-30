@@ -8,8 +8,14 @@ using be.SaveDownload;
 using be.SaveTitle;
 using be.Search;
 using be.Subscribe;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (string.IsNullOrEmpty(builder.Configuration["Urls"]))
+{
+    builder.WebHost.UseUrls("http://0.0.0.0:1713");
+}
 
 builder.Services.AddCors(options =>
 {
@@ -45,5 +51,20 @@ var app = builder.Build();
 
 app.UseCors();
 app.MapControllers();
+
+var embeddedProvider = new ManifestEmbeddedFileProvider(typeof(Program).Assembly, "wwwroot");
+app.UseFileServer(new FileServerOptions
+{
+    FileProvider = embeddedProvider,
+});
+app.MapFallbackToFile("movies/{*path}", "index.html", new StaticFileOptions { FileProvider = embeddedProvider });
+app.MapFallbackToFile("series/{*path}", "index.html", new StaticFileOptions { FileProvider = embeddedProvider });
+app.MapFallbackToFile("playlist/{*path}", "index.html", new StaticFileOptions { FileProvider = embeddedProvider });
+
+System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+{
+    FileName = "http://localhost:1713",
+    UseShellExecute = true
+});
 
 app.Run();

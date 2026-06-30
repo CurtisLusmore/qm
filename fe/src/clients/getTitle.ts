@@ -195,7 +195,7 @@ export default async function getTitle(id: string, includeEpisodes: boolean = tr
 
   async function query(id: string, endCursor: string = ''): Promise<TitleResult> {
     let resp = await fetch(
-     'https://bff.fifteenthstandard.com/proxy?url=https://graphql.imdb.com',
+     `/api/proxy?url=https://graphql.imdb.com`,
       {
         'method': 'POST',
         'headers': { 'Content-Type': 'application/json' },

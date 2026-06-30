@@ -5,7 +5,7 @@ namespace be.Search;
 [ApiController]
 public class SearchController(SearchService service) : ControllerBase
 {
-    [HttpGet("search")]
+    [HttpGet("api/search")]
     public async Task<IActionResult> SearchAsync([FromQuery] string query)
     {
         try

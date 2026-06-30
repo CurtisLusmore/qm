@@ -5,8 +5,8 @@ namespace be.GetMediaFile;
 [ApiController]
 public class GetMediaFileController(GetMediaFileService service): ControllerBase
 {
-    [HttpHead("movies/{titleId}/media")]
-    [HttpGet("movies/{titleId}/media")]
+    [HttpHead("api/movies/{titleId}/media")]
+    [HttpGet("api/movies/{titleId}/media")]
     public IActionResult GetMovieMediaFile([FromRoute] string titleId)
     {
         try
@@ -22,8 +22,8 @@ public class GetMediaFileController(GetMediaFileService service): ControllerBase
         }
     }
 
-    [HttpHead("series/{titleId}/{seasonNumber}/{episodeNumber}/media")]
-    [HttpGet("series/{titleId}/{seasonNumber}/{episodeNumber}/media")]
+    [HttpHead("api/series/{titleId}/{seasonNumber}/{episodeNumber}/media")]
+    [HttpGet("api/series/{titleId}/{seasonNumber}/{episodeNumber}/media")]
     public IActionResult GetEpisodeMediaFile([FromRoute] string titleId, int seasonNumber, int episodeNumber)
     {
         try

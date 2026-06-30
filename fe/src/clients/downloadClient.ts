@@ -2,7 +2,7 @@ import type { DownloadSearchResult, Title } from '../types';
 
 export async function searchDownloads(searchTerm: string): Promise<DownloadSearchResult[]> {
   const query = searchTerm.trim();
-  const response = await fetch(`http://localhost:5138/search?query=${query}`);
+  const response = await fetch(`/api/search?query=${query}`);
   if (!response.ok) {
     throw new Error(`Search request failed with status ${response.status}`);
   }
@@ -15,7 +15,7 @@ export async function startDownload(infoHash: string, title: Title): Promise<voi
     infoHash,
     title,
   };
-  const response = await fetch('http://localhost:5138/downloads', {
+  const response = await fetch('/api/downloads', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import type { Movie, Series, ServerCollection } from '../types';
 
 export async function getServerCollection(): Promise<ServerCollection> {
-  const response = await fetch(`http://localhost:5138/collection`);
+  const response = await fetch(`/api/collection`);
   if (!response.ok) {
     throw new Error(`Collection request failed with status ${response.status}`);
   }
@@ -10,7 +10,7 @@ export async function getServerCollection(): Promise<ServerCollection> {
 };
 
 export async function addMovieToServerCollection(title: Movie): Promise<void> {
-  await fetch('http://localhost:5138/movies', {
+  await fetch('/api/movies', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -20,7 +20,7 @@ export async function addMovieToServerCollection(title: Movie): Promise<void> {
 };
 
 export async function addSeriesToServerCollection(title: Series): Promise<void> {
-  await fetch('http://localhost:5138/series', {
+  await fetch('/api/series', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -30,13 +30,13 @@ export async function addSeriesToServerCollection(title: Series): Promise<void> 
 };
 
 export async function removeMovieFromServerCollection(titleId: string): Promise<void> {
-  await fetch(`http://localhost:5138/movies/${titleId}`, {
+  await fetch(`/api/movies/${titleId}`, {
     method: 'DELETE',
   });
 };
 
 export async function removeSeriesFromServerCollection(titleId: string): Promise<void> {
-  await fetch(`http://localhost:5138/series/${titleId}`, {
+  await fetch(`/api/series/${titleId}`, {
     method: 'DELETE',
   });
 };

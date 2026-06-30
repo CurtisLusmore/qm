@@ -48,7 +48,7 @@ function mapSearchResults(results: SearchResults): TitleSummary[] {
 
 export default async function getSuggestions(searchTerm: string): Promise<TitleSummary[]> {
   if (!searchTerm) return [];
-  const resp = await fetch(`https://bff.fifteenthstandard.com/proxy?url=https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(searchTerm)}.json`);
+  const resp = await fetch(`/api/proxy?url=https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(searchTerm)}.json`);
   const data = await resp.json() as SearchResults;
   return mapSearchResults(data);
 };

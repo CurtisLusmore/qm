@@ -5,7 +5,7 @@ namespace be.SaveDownload;
 [ApiController]
 public class SaveDownloadController(SaveDownloadService service) : ControllerBase
 {
-    [HttpPost("downloads")]
+    [HttpPost("api/downloads")]
     public async Task<IActionResult> DownloadAsync([FromBody] SaveDownloadRequest request)
     {
         try

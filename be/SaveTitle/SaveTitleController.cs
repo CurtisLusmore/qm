@@ -6,7 +6,7 @@ namespace be.SaveTitle;
 [ApiController]
 public class SaveTitleController(SaveTitleService service) : ControllerBase
 {
-    [HttpPost("movies")]
+    [HttpPost("api/movies")]
     public async Task<IActionResult> SaveMovieAsync([FromBody] Movie title)
     {
         try
@@ -22,7 +22,7 @@ public class SaveTitleController(SaveTitleService service) : ControllerBase
         }
     }
 
-    [HttpPost("series")]
+    [HttpPost("api/series")]
     public async Task<IActionResult> SaveSeriesAsync([FromBody] Series title)
     {
         try

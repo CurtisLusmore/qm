@@ -62,9 +62,9 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
 
   useEffect(() => {
     (async function () {
-      const resp = await fetch(`http://localhost:5138/movies/${title.id}/media`, { method: 'HEAD' });
+      const resp = await fetch(`/api/movies/${title.id}/media`, { method: 'HEAD' });
       if (resp.ok) {
-        setVideoUrl(`http://localhost:5138/movies/${title.id}/media`);
+        setVideoUrl(`/api/movies/${title.id}/media`);
       }
     }());
   }, []);

@@ -76,14 +76,15 @@ public partial class DownloadManagementService(
 
     private void EnsureDirectories()
     {
-        Directory.CreateDirectory(metadataDirectory);
-        Directory.CreateDirectory(fastresumeDirectory);
-        Directory.CreateDirectory(completedDirectory);
         Directory.CreateDirectory(binDirectory);
+        Directory.CreateDirectory(completedDirectory);
+        Directory.CreateDirectory(fastresumeDirectory);
+        Directory.CreateDirectory(metadataDirectory);
         Directory.CreateDirectory(moviesDirectory);
         Directory.CreateDirectory(moviesTitlesDirectory);
         Directory.CreateDirectory(seriesDirectory);
         Directory.CreateDirectory(seriesTitlesDirectory);
+        Directory.CreateDirectory(titlesDirectory);
     }
 
     private async Task Run(CancellationToken cancellationToken)
