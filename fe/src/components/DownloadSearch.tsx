@@ -46,7 +46,7 @@ export default function DownloadSearch({ title, open, onClose }: {
     }());
   }, [ title, open, searchTerm ]);
 
-  async function handleClickDownload(infoHash: string) {
+  async function handleClickDownload(infoHash: string): Promise<void> {
     try {
       await startDownload(infoHash, title);
       dispatchToast('Download started successfully', 'success');
@@ -106,19 +106,40 @@ export default function DownloadSearch({ title, open, onClose }: {
         {loaded && searchResults.length === 0 && <Typography>No results found.</Typography>}
         {loaded && searchResults.length > 0 && (
           searchResults.map(result => (
-            <Card key={result.infoHash} variant="outlined" sx={{ mb: 2 }}>
-              <CardHeader
-                title={result.name}
-                subheader={`${formatBytes(result.sizeBytes)} \u00A0\u2022\u00A0 ${result.seeders} seeders`}
-              />
-              <CardActions>
-                <Button onClick={() => handleClickDownload(result.infoHash)} color="primary">Download</Button>
-              </CardActions>
-            </Card>
+            <SearchResult key={result.infoHash} result={result} onClickDownload={handleClickDownload} />
           ))
         )}
       </DialogContent>
     </Dialog>
+  );
+};
+
+function SearchResult({ result, onClickDownload }: {
+  result: DownloadSearchResult,
+  onClickDownload: (infoHash: string) => Promise<void>,
+}): React.ReactElement {
+  const [ loading, setLoading ] = useState(false);
+
+  async function handleClickDownload() {
+    setLoading(true);
+    try {
+      await onClickDownload(result.infoHash);
+    } catch (error) {
+      console.error(error);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Card variant="outlined" sx={{ mb: 2 }}>
+      <CardHeader
+        title={result.name}
+        subheader={`${formatBytes(result.sizeBytes)} \u00A0\u2022\u00A0 ${result.seeders} seeders`}
+      />
+      <CardActions>
+        <Button onClick={handleClickDownload} color="primary" loading={loading}>Download</Button>
+      </CardActions>
+    </Card>
   );
 };
 

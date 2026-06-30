@@ -8,4 +8,13 @@ export default defineConfig({
     emptyOutDir: true,
   },
   plugins: [react()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:1713',
+        changeOrigin: false,
+        secure: false,
+      },
+    },
+  }
 })

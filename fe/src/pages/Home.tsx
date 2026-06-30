@@ -158,8 +158,8 @@ export default function Search() {
 
 function SearchResultItem({ item, add, remove, getTitle, navigate }: {
   item: TitleSummary & CollectionStatus,
-  add: (title: Title) => void,
-  remove: (titleId: string) => void,
+  add: (title: Title) => Promise<void>,
+  remove: (titleId: string) => Promise<void>,
   getTitle: (titleId: string) => Promise<Title>,
   navigate: (path: string) => void,
 }) {
@@ -188,7 +188,7 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
     setLoading(true);
     try {
       const title = await getTitle(item.id);
-      add(title);
+      await add(title);
     } catch (error) {
       alert(error);
     }
@@ -199,7 +199,7 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
     ev.stopPropagation();
     setLoading(true);
     try {
-      remove(item.id);
+      await remove(item.id);
     } catch (error) {
       alert(error);
     }
