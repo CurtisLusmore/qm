@@ -3,6 +3,7 @@ using be.GetMediaFile;
 using be.HostedServices;
 using be.Interfaces;
 using be.ListDownloads;
+using be.RemoveDownload;
 using be.RemoveTitle;
 using be.SaveDownload;
 using be.SaveTitle;
@@ -32,6 +33,7 @@ builder.Services.Configure<DownloadManagementService.Config>(builder.Configurati
 builder.Services.AddSingleton<DownloadManagementService>();
 builder.Services.AddSingleton<ICollectionRetriever>(p => p.GetRequiredService<DownloadManagementService>());
 builder.Services.AddSingleton<IDownloadLister>(p => p.GetRequiredService<DownloadManagementService>());
+builder.Services.AddSingleton<IDownloadRemover>(p => p.GetRequiredService<DownloadManagementService>());
 builder.Services.AddSingleton<IDownloadSaver>(p => p.GetRequiredService<DownloadManagementService>());
 builder.Services.AddSingleton<IMediaFileRetriever>(p => p.GetRequiredService<DownloadManagementService>());
 builder.Services.AddSingleton<ITitleRemover>(p => p.GetRequiredService<DownloadManagementService>());
@@ -40,6 +42,7 @@ builder.Services.AddHostedService(p => p.GetRequiredService<DownloadManagementSe
 builder.Services.AddScoped<GetCollectionService>();
 builder.Services.AddScoped<GetMediaFileService>();
 builder.Services.AddScoped<ListDownloadsService>();
+builder.Services.AddScoped<RemoveDownloadService>();
 builder.Services.AddScoped<RemoveTitleService>();
 builder.Services.AddScoped<SaveDownloadService>();
 builder.Services.AddScoped<SaveTitleService>();

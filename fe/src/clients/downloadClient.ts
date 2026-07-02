@@ -10,6 +10,15 @@ export async function searchDownloads(searchTerm: string): Promise<DownloadSearc
   return results;
 };
 
+export async function removeDownload(infoHash: string): Promise<void> {
+  const response = await fetch(`/api/downloads/${infoHash}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`Remove download request failed with status ${response.status}`);
+  }
+};
+
 export async function startDownload(infoHash: string, title: Title): Promise<void> {
   const body = {
     infoHash,

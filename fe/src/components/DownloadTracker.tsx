@@ -19,10 +19,13 @@ import {
   type SvgIconProps,
   Tooltip,
   Typography,
+  DialogActions,
 } from '@mui/material';
 import {
+  Archive,
   CheckCircle,
   Close,
+  Delete,
   DownloadForOffline,
   Downloading,
   DriveFileMove,
@@ -32,6 +35,7 @@ import {
   PauseCircle,
   Pending,
 } from '@mui/icons-material';
+import { removeDownload } from '../clients';
 import { useDownloads, useWakeLock } from '../hooks';
 import type { DownloadTracker, DownloadTrackerStatus, FileTracker } from '../types';
 
@@ -141,57 +145,125 @@ function FloatingButton({ downloads, onClick }: { downloads: DownloadTracker[], 
 
 function DownloadCard({ download }: { download: DownloadTracker }): React.ReactElement {
   const [ expanded, setExpanded ] = useState(false);
+  const [ deleteDialogOpen, setDeleteDialogOpen ] = useState(false);
+
   function handleClickExpand() {
     setExpanded(!expanded);
   };
 
-  let name: string;
-  switch (download.title.type.toLowerCase()) {
-    case 'movie':
-      name = `${download.title.name} (${download.title.year})`;
-      break;
-    case 'series':
-      name = `${download.title.name} (${download.title.year}): ${getEpisodes(download)}`;
-      break;
-    default:
-      name = `${download.title.name} (${download.title.year})`;
-  }
+  function onDelete() {
+    setDeleteDialogOpen(true);
+  };
+
+  async function handleConfirmDelete() {
+    await removeDownload(download.infoHash);
+  };
+
+  const name = getTrackerName(download);
 
   return (
-    <Card>
-      <Box sx={{ display: 'flex'}}>
-        <CardContent sx={{ flexGrow: 1 }}>
-          <Typography variant="h6">{name}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start', padding: 0 }}>
-            {formatStatus(download.status)}
-            <Typography color="textSecondary">{download.seeds} seeders</Typography>
-            <Typography color="textSecondary">{formatBytes(download.downloadedBytes)} / {formatBytes(download.targetBytes)} ({formatPercent(download.partialProgressPercent)})</Typography>
-            <Typography color="textSecondary">{formatBytes(download.bytesPerSecond)}ps</Typography>
-          </Box>
-          {download.error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {download.error}
-            </Alert>
-          )}
-        </CardContent>
-        <CardActions>
-          <Tooltip key="Expand" title={expanded ? 'Collapse' : 'Expand'}>
-            <IconButton onClick={handleClickExpand} disabled={!download.files || download.files.length === 0}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
-          </Tooltip>
-        </CardActions>
-      </Box>
-      <LinearProgress {...useProgressProps(download)} />
-      <Collapse in={expanded}>
-        <Stack spacing={1}>
-          {download.files?.map(file => (
-            <DownloadFileRow key={file.path} file={file} />
-          ))}
-        </Stack>
-      </Collapse>
-    </Card>
+    <>
+      <Card>
+        <Box sx={{ display: 'flex'}}>
+          <CardContent sx={{ flexGrow: 1 }}>
+            <Typography variant="h6">{name}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start', padding: 0 }}>
+              {formatStatus(download.status)}
+              <Typography color="textSecondary">{download.seeds} seeders</Typography>
+              <Typography color="textSecondary">{formatBytes(download.downloadedBytes)} / {formatBytes(download.targetBytes)} ({formatPercent(download.partialProgressPercent)})</Typography>
+              <Typography color="textSecondary">{formatBytes(download.bytesPerSecond)}ps</Typography>
+            </Box>
+            {download.error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {download.error}
+              </Alert>
+            )}
+          </CardContent>
+          <CardActions>
+            <Stack direction="row">
+              {[
+                ...DownloadActions({ download, onDelete }),
+                <Tooltip key="Expand" title={expanded ? 'Collapse' : 'Expand'}>
+                  <IconButton onClick={handleClickExpand} disabled={!download.files || download.files.length === 0}>
+                    {expanded ? <ExpandLess /> : <ExpandMore />}
+                  </IconButton>
+                </Tooltip>
+              ]}
+            </Stack>
+          </CardActions>
+        </Box>
+        <LinearProgress {...useProgressProps(download)} />
+        <Collapse in={expanded}>
+          <Stack spacing={1}>
+            {download.files?.map(file => (
+              <DownloadFileRow key={file.path} file={file} />
+            ))}
+          </Stack>
+        </Collapse>
+      </Card>
+      <ComfirmDeleteDialog
+        tracker={download}
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
+    </>
   );
+};
+
+function DownloadActions({ download, onDelete }: {
+  download: DownloadTracker,
+  onDelete: () => void,
+}): React.ReactElement[] {
+  const deleteAction = (
+    <Tooltip key="Delete" title="Delete">
+      <IconButton color="error" onClick={onDelete}>
+        <Delete />
+      </IconButton>
+    </Tooltip>
+  );
+
+  const pauseAction = (
+    <Tooltip key="Pause" title="Pause">
+      <IconButton onClick={() => { /* TODO: Implement pause action */ }}>
+        <PauseCircle />
+      </IconButton>
+    </Tooltip>
+  );
+
+  const resumeAction = (
+    <Tooltip key="Resume" title="Resume">
+      <IconButton onClick={() => { /* TODO: Implement resume action */ }}>
+        <Downloading />
+      </IconButton>
+    </Tooltip>
+  );
+
+  const archiveAction = (
+    <Tooltip key="Archive" title="Archive">
+      <IconButton color="success" onClick={() => { /* TODO: Implement archive action */ }}>
+        <Archive />
+      </IconButton>
+    </Tooltip>
+  );
+
+  switch (download.status) {
+    case 'Received':
+    case 'DownloadingTorrentFile':
+    case 'DownloadTorrentFileFailed':
+    case 'DownloadedTorrentFile':
+    case 'AddedTorrent':
+    case 'StartedTorrent':
+    case 'InitializingTorrent':
+      return [ deleteAction ];
+    case 'DownloadingTorrent':
+      return [ pauseAction, deleteAction ];
+    case 'PausedTorrent':
+      return [ resumeAction, deleteAction ];
+    case 'Completed':
+      return [ archiveAction ];
+    default: return [];
+  }
 };
 
 function DownloadFileRow({ file }: { file: FileTracker }): React.ReactElement {
@@ -209,6 +281,43 @@ function DownloadFileRow({ file }: { file: FileTracker }): React.ReactElement {
         variant="determinate"
       />
     </Box>
+  );
+};
+
+function ComfirmDeleteDialog({ tracker, open, onClose, onConfirm }: {
+  tracker: DownloadTracker,
+  open: boolean,
+  onClose: () => void,
+  onConfirm: () => Promise<void>,
+}): React.ReactElement {
+  const [ loading, setLoading ] = useState(false);
+  async function handleConfirm() {
+    setLoading(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (error) {
+      console.error('Failed to delete download:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Confirm Delete</DialogTitle>
+      <DialogContent>
+        Are you sure you want to delete the download for "{getTrackerName(tracker)}"?
+        This action cannot be undone, and any downloaded files will be permanently removed.
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="primary">
+          Cancel
+        </Button>
+        <Button onClick={handleConfirm} color="error" loading={loading}>
+          Delete
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -242,6 +351,19 @@ function getEpisodes(download: DownloadTracker): string {
   }
 };
 
+function getTrackerName(download: DownloadTracker): string {
+  switch (download.title.type.toLowerCase()) {
+    case 'movie':
+      return `${download.title.name} (${download.title.year})`;
+
+    case 'series':
+      return `${download.title.name} (${download.title.year}): ${getEpisodes(download)}`;
+
+    default:
+      return `${download.title.name} (${download.title.year})`;
+  }
+};
+
 function formatStatus(status: DownloadTrackerStatus): React.ReactElement {
   const props: SvgIconProps = {
     fontSize: 'small',
@@ -272,6 +394,8 @@ function formatStatus(status: DownloadTrackerStatus): React.ReactElement {
       return <Typography color="textSecondary"><DriveFileMove {...props} color="warning" />&nbsp;Manual Sorting Required</Typography>;
     case 'Completed':
       return <Typography color="textSecondary"><CheckCircle {...props} color="success" />&nbsp;Completed</Typography>;
+    case 'Removing':
+      return <Typography color="textSecondary"><Delete {...props} color="error" />&nbsp;Deleting</Typography>;
     default:
       return <Typography color="textSecondary">{status}</Typography>;
   }
@@ -315,6 +439,8 @@ function useProgressProps(download: DownloadTracker): LinearProgressProps {
       return { variant: 'indeterminate', color: 'success' };
     case 'ManualSortingRequired':
       return { variant: 'query', color: 'warning' };
+    case 'Removing':
+      return { variant: 'indeterminate', color: 'error' };
     case 'Completed':
       return { variant: 'buffer', value: 100, valueBuffer: 100, color: 'success' };
     default:

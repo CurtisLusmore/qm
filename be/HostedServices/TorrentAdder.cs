@@ -6,14 +6,14 @@ namespace be.HostedServices;
 
 public partial class DownloadManagementService
 {
-    private async Task AddTorrents(CancellationToken cancellationToken)
+    private async Task AddTorrentsAsync(CancellationToken cancellationToken)
     {
         foreach (var tracker in trackers.Values)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await AddTorrent(tracker, cancellationToken);
+                await AddTorrentAsync(tracker, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -22,7 +22,7 @@ public partial class DownloadManagementService
         }
     }
 
-    private async Task AddTorrent(DownloadTracker tracker, CancellationToken cancellationToken)
+    private async Task AddTorrentAsync(DownloadTracker tracker, CancellationToken cancellationToken)
     {
         if (tracker.Status != DownloadStatus.DownloadedTorrentFile) return;
 

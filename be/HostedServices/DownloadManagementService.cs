@@ -92,14 +92,15 @@ public partial class DownloadManagementService(
         try
         {
             logger.LogDebug("Running...");
-            await WatchTorrents(cancellationToken);
+            await WatchTorrentsAsync(cancellationToken);
             await RestartFailedTorrentsAsync(cancellationToken);
             await DetectSavedDownloadsAsync(cancellationToken);
             await DownloadTorrentFilesAsync(cancellationToken);
-            await AddTorrents(cancellationToken);
-            await StopTorrents(cancellationToken);
-            await FinalizeTorrents(cancellationToken);
-            await SortFiles(cancellationToken);
+            await AddTorrentsAsync(cancellationToken);
+            await StopTorrentsAsync(cancellationToken);
+            await FinalizeTorrentsAsync(cancellationToken);
+            await SortFilesAsync(cancellationToken);
+            await RemoveDownloadsAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

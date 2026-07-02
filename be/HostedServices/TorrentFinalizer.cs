@@ -6,14 +6,14 @@ namespace be.HostedServices;
 
 public partial class DownloadManagementService
 {
-    private async Task FinalizeTorrents(CancellationToken cancellationToken)
+    private async Task FinalizeTorrentsAsync(CancellationToken cancellationToken)
     {
         foreach (var (infoHash, manager) in managers)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await FinalizeTorrent(infoHash, manager, cancellationToken);
+                await FinalizeTorrentAsync(infoHash, manager, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -22,7 +22,7 @@ public partial class DownloadManagementService
         }
     }
 
-    private async Task FinalizeTorrent(string infoHash, TorrentManager manager, CancellationToken cancellationToken)
+    private async Task FinalizeTorrentAsync(string infoHash, TorrentManager manager, CancellationToken cancellationToken)
     {
         if (manager.State != TorrentState.Stopped) return;
 

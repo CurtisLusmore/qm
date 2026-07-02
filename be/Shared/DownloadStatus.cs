@@ -19,5 +19,6 @@ public enum DownloadStatus
     DownloadedTorrent,
     SortingFiles,
     ManualSortingRequired,
-    Completed
+    Completed,
+    Removing
 }

@@ -5,14 +5,14 @@ namespace be.HostedServices;
 
 public partial class DownloadManagementService
 {
-    private async Task SortFiles(CancellationToken cancellationToken)
+    private async Task SortFilesAsync(CancellationToken cancellationToken)
     {
         foreach (var (_, tracker) in trackers)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await SortFilesForTitle(tracker, cancellationToken);
+                await SortFilesForTitleAsync(tracker, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -21,18 +21,18 @@ public partial class DownloadManagementService
         }
     }
 
-    private async Task SortFilesForTitle(DownloadTracker tracker, CancellationToken cancellationToken)
+    private async Task SortFilesForTitleAsync(DownloadTracker tracker, CancellationToken cancellationToken)
     {
         if (tracker.Status != DownloadStatus.DownloadedTorrent) return;
 
         switch (tracker.Title.Type)
         {
             case TitleType.Movie:
-                await SortFilesForMovie(tracker, cancellationToken);
+                await SortFilesForMovieAsync(tracker, cancellationToken);
                 break;
 
             case TitleType.Series:
-                await SortFilesForSeries(tracker, cancellationToken);
+                await SortFilesForSeriesAsync(tracker, cancellationToken);
                 break;
 
             default:
@@ -40,12 +40,12 @@ public partial class DownloadManagementService
                 break;
         }
 
-        await BinUnsortedFiles(tracker, cancellationToken);
+        await BinUnsortedFilesAsync(tracker, cancellationToken);
 
         trackers[tracker.InfoHash] = tracker with { Status = DownloadStatus.Completed };
     }
 
-    private async Task SortFilesForMovie(DownloadTracker tracker, CancellationToken cancellationToken)
+    private async Task SortFilesForMovieAsync(DownloadTracker tracker, CancellationToken cancellationToken)
     {
         var targetDirectory = moviesDirectory;
         var targetFilename = $"{tracker.Title.Name} ({tracker.Title.Year}) [{tracker.Title.Id}]";
@@ -64,7 +64,7 @@ public partial class DownloadManagementService
         }
     }
 
-    private async Task SortFilesForSeries(DownloadTracker tracker, CancellationToken cancellationToken)
+    private async Task SortFilesForSeriesAsync(DownloadTracker tracker, CancellationToken cancellationToken)
     {
         var targetDirectory = TitleDirectory(seriesDirectory, tracker.Title);
         Directory.CreateDirectory(targetDirectory);
@@ -107,7 +107,7 @@ public partial class DownloadManagementService
         }
     }
 
-    private async Task BinUnsortedFiles(DownloadTracker tracker, CancellationToken cancellationToken)
+    private async Task BinUnsortedFilesAsync(DownloadTracker tracker, CancellationToken cancellationToken)
     {
         var sourceDirectory = TitleDirectory(completedDirectory, tracker.Title, tracker.InfoHash);
         var titleBinDirectory = TitleDirectory(binDirectory, tracker.Title, tracker.InfoHash);

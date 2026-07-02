@@ -57,7 +57,8 @@ export type DownloadTrackerStatus =
   | 'DownloadedTorrent'
   | 'SortingFiles'
   | 'ManualSortingRequired'
-  | 'Completed';
+  | 'Completed'
+  | 'Removing';
 
 export type Episode = Title & {
   seasonNumber: number;
