@@ -11,7 +11,7 @@ public class ProxyController(IHttpClientFactory httpClientFactory) : ControllerB
         var url = Request.Query["url"].ToString();
         if (string.IsNullOrEmpty(url))
         {
-            return BadRequest("Missing 'url' query parameter.");
+            return BadRequest("Missing 'url' query parameter");
         }
 
         byte[]? body = null;

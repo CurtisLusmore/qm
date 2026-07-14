@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -26,23 +26,46 @@ import {
   CheckCircle,
   Close,
   Delete,
-  DownloadForOffline,
   Downloading,
-  DriveFileMove,
   Error,
   ExpandLess,
   ExpandMore,
   PauseCircle,
   Pending,
 } from '@mui/icons-material';
-import { removeDownload } from '../clients';
-import { useDownloads, useWakeLock } from '../hooks';
+import { pauseDownload, resumeDownload, removeDownload } from '../clients';
+import {
+  useDispatchToast,
+  useDownloads,
+  useServerEventHandlerRegistration,
+  useWakeLock,
+} from '../hooks';
 import type { DownloadTracker, DownloadTrackerStatus, FileTracker } from '../types';
 
 export default function DownloadTracker(): React.ReactElement {
   const [ open, setOpen ] = useState(false);
   const downloads = useDownloads();
   const { isLocked, requestWakeLock, releaseWakeLock } = useWakeLock();
+  const registration = useServerEventHandlerRegistration();
+  const dispatchToast = useDispatchToast();
+
+  useEffect(() => {
+    return registration(function handleServerEvent(event) {
+      switch (event.type) {
+        case 'DownloadAdded':
+          dispatchToast(`Download added: ${event.download.name}`);
+          break;
+
+        case 'DownloadCompleted':
+          dispatchToast(`Download completed: ${event.download.name}`, 'success');
+          break;
+
+        case 'DownloadFailed':
+          dispatchToast(`Download failed: ${event.download.name}`, 'error');
+          break;
+      }
+    });
+  }, [ registration, dispatchToast ]);
 
   function handleClickOpen() {
     setOpen(true);
@@ -111,8 +134,8 @@ function FloatingButton({ downloads, onClick }: { downloads: DownloadTracker[], 
   const totalDownloadedBytes = downloads.reduce((sum, download) => sum + download.downloadedBytes, 0);
   const totalTargetBytes = downloads.reduce((sum, download) => sum + download.targetBytes, 0);
   const overallProgressPercent = totalTargetBytes > 0 ? (totalDownloadedBytes / totalTargetBytes) * 100 : 0;
-  const anyFailed = downloads.some(download => download.status === 'DownloadTorrentFailed');
-  const allCompleted = downloads.every(download => ['DownloadedTorrent', 'StoppedTorrent', 'StoppingTorrent'].includes(download.status));
+  const anyFailed = downloads.some(download => download.status === 'Failed');
+  const allCompleted = downloads.every(download => download.status === 'Completed');
 
   return (
     <Fab
@@ -151,6 +174,14 @@ function DownloadCard({ download }: { download: DownloadTracker }): React.ReactE
     setExpanded(!expanded);
   };
 
+  function onPause() {
+    pauseDownload(download.infoHash);
+  };
+
+  function onResume() {
+    resumeDownload(download.infoHash);
+  };
+
   function onDelete() {
     setDeleteDialogOpen(true);
   };
@@ -159,14 +190,12 @@ function DownloadCard({ download }: { download: DownloadTracker }): React.ReactE
     await removeDownload(download.infoHash);
   };
 
-  const name = getTrackerName(download);
-
   return (
     <>
       <Card>
         <Box sx={{ display: 'flex'}}>
           <CardContent sx={{ flexGrow: 1 }}>
-            <Typography variant="h6">{name}</Typography>
+            <Typography variant="h6">{download.name}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'flex-start', padding: 0 }}>
               {formatStatus(download.status)}
               <Typography color="textSecondary">{download.seeds} seeders</Typography>
@@ -182,7 +211,7 @@ function DownloadCard({ download }: { download: DownloadTracker }): React.ReactE
           <CardActions>
             <Stack direction="row">
               {[
-                ...DownloadActions({ download, onDelete }),
+                ...DownloadActions({ download, onPause, onResume, onDelete }),
                 <Tooltip key="Expand" title={expanded ? 'Collapse' : 'Expand'}>
                   <IconButton onClick={handleClickExpand} disabled={!download.files || download.files.length === 0}>
                     {expanded ? <ExpandLess /> : <ExpandMore />}
@@ -195,7 +224,7 @@ function DownloadCard({ download }: { download: DownloadTracker }): React.ReactE
         <LinearProgress {...useProgressProps(download)} />
         <Collapse in={expanded}>
           <Stack spacing={1}>
-            {download.files?.map(file => (
+            {download.files?.filter(file => file.priority !== 'Skip').map(file => (
               <DownloadFileRow key={file.path} file={file} />
             ))}
           </Stack>
@@ -211,8 +240,10 @@ function DownloadCard({ download }: { download: DownloadTracker }): React.ReactE
   );
 };
 
-function DownloadActions({ download, onDelete }: {
+function DownloadActions({ download, onPause, onResume, onDelete }: {
   download: DownloadTracker,
+  onPause: () => void,
+  onResume: () => void,
   onDelete: () => void,
 }): React.ReactElement[] {
   const deleteAction = (
@@ -225,7 +256,7 @@ function DownloadActions({ download, onDelete }: {
 
   const pauseAction = (
     <Tooltip key="Pause" title="Pause">
-      <IconButton onClick={() => { /* TODO: Implement pause action */ }}>
+      <IconButton onClick={onPause}>
         <PauseCircle />
       </IconButton>
     </Tooltip>
@@ -233,7 +264,7 @@ function DownloadActions({ download, onDelete }: {
 
   const resumeAction = (
     <Tooltip key="Resume" title="Resume">
-      <IconButton onClick={() => { /* TODO: Implement resume action */ }}>
+      <IconButton onClick={onResume}>
         <Downloading />
       </IconButton>
     </Tooltip>
@@ -250,19 +281,26 @@ function DownloadActions({ download, onDelete }: {
   switch (download.status) {
     case 'Received':
     case 'DownloadingTorrentFile':
-    case 'DownloadTorrentFileFailed':
-    case 'DownloadedTorrentFile':
-    case 'AddedTorrent':
-    case 'StartedTorrent':
-    case 'InitializingTorrent':
+    case 'AddingTorrent':
+    case 'MappingFiles':
+    case 'LoadingFastResume':
+    case 'StartingTorrent':
+    case 'LoadingMetadata':
       return [ deleteAction ];
-    case 'DownloadingTorrent':
+    case 'DownloadingFiles':
       return [ pauseAction, deleteAction ];
-    case 'PausedTorrent':
+    case 'DownloadPaused':
       return [ resumeAction, deleteAction ];
+    case 'StoppingTorrent':
+      return [ deleteAction ];
     case 'Completed':
       return [ archiveAction ];
-    default: return [];
+    case 'Deleting':
+      return [];
+    case 'Failed':
+      return [ deleteAction ];
+    default:
+      return [];
   }
 };
 
@@ -306,7 +344,7 @@ function ComfirmDeleteDialog({ tracker, open, onClose, onConfirm }: {
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>Confirm Delete</DialogTitle>
       <DialogContent>
-        Are you sure you want to delete the download for "{getTrackerName(tracker)}"?
+        Are you sure you want to delete the download for "{tracker.name}"?
         This action cannot be undone, and any downloaded files will be permanently removed.
       </DialogContent>
       <DialogActions>
@@ -321,49 +359,6 @@ function ComfirmDeleteDialog({ tracker, open, onClose, onConfirm }: {
   );
 };
 
-function getEpisodes(download: DownloadTracker): string {
-  if (!download.files || download.files.length === 0) {
-    return '';
-  }
-
-  const eps = new Map<number, Set<number>>();
-  for (const file of download.files) {
-    const match = file.path.match(/[Ss](\d+)[Ee](\d+)/i);
-    if (match) {
-      const season = parseInt(match[1], 10);
-      const episode = parseInt(match[2], 10);
-      if (!eps.has(season)) {
-        eps.set(season, new Set());
-      }
-      eps.get(season)!.add(episode);
-    }
-  }
-  if (eps.size !== 1) {
-    return '';
-  } else {
-    const season = Array.from(eps.keys())[0];
-    if (eps.get(season)!.size === 1) {
-      const episode = Array.from(eps.get(season)!)[0];
-      return `S${leftPad(season.toString(), 2, '0')}E${leftPad(episode.toString(), 2, '0')}`;
-    } else {
-      return `S${leftPad(season.toString(), 2, '0')}`;
-    }
-  }
-};
-
-function getTrackerName(download: DownloadTracker): string {
-  switch (download.title.type.toLowerCase()) {
-    case 'movie':
-      return `${download.title.name} (${download.title.year})`;
-
-    case 'series':
-      return `${download.title.name} (${download.title.year}): ${getEpisodes(download)}`;
-
-    default:
-      return `${download.title.name} (${download.title.year})`;
-  }
-};
-
 function formatStatus(status: DownloadTrackerStatus): React.ReactElement {
   const props: SvgIconProps = {
     fontSize: 'small',
@@ -372,30 +367,24 @@ function formatStatus(status: DownloadTrackerStatus): React.ReactElement {
   switch (status) {
     case 'Received':
     case 'DownloadingTorrentFile':
-    case 'DownloadTorrentFileFailed':
-    case 'DownloadedTorrentFile':
-    case 'AddedTorrent':
-    case 'StartedTorrent':
-    case 'InitializingTorrent':
+    case 'AddingTorrent':
+    case 'MappingFiles':
+    case 'LoadingFastResume':
+    case 'StartingTorrent':
+    case 'LoadingMetadata':
       return <Typography color="textSecondary"><Pending {...props} color="primary" />&nbsp;Initializing</Typography>;
-    case 'DownloadingTorrent':
+    case 'DownloadingFiles':
       return <Typography color="textSecondary"><Downloading {...props} color="primary" />&nbsp;Downloading</Typography>;
-    case 'PausedTorrent':
+    case 'DownloadPaused':
       return <Typography color="textSecondary"><PauseCircle {...props} color="warning" />&nbsp;Paused</Typography>;
     case 'StoppingTorrent':
       return <Typography color="textSecondary"><CheckCircle {...props} color="success" />&nbsp;Completing</Typography>;
-    case 'DownloadTorrentFailed':
-      return <Typography color="textSecondary"><Error {...props} color="error" />&nbsp;Failed</Typography>;
-    case 'DownloadedTorrent':
-      return <Typography color="textSecondary"><DownloadForOffline {...props} color="success" />&nbsp;Downloaded</Typography>;
-    case 'SortingFiles':
-      return <Typography color="textSecondary"><DriveFileMove {...props} color="success" />&nbsp;Sorting</Typography>;
-    case 'ManualSortingRequired':
-      return <Typography color="textSecondary"><DriveFileMove {...props} color="warning" />&nbsp;Manual Sorting Required</Typography>;
     case 'Completed':
       return <Typography color="textSecondary"><CheckCircle {...props} color="success" />&nbsp;Completed</Typography>;
-    case 'Removing':
+    case 'Deleting':
       return <Typography color="textSecondary"><Delete {...props} color="error" />&nbsp;Deleting</Typography>;
+    case 'Failed':
+      return <Typography color="textSecondary"><Error {...props} color="error" />&nbsp;Failed</Typography>;
     default:
       return <Typography color="textSecondary">{status}</Typography>;
   }
@@ -417,42 +406,25 @@ function useProgressProps(download: DownloadTracker): LinearProgressProps {
   switch (download.status) {
     case 'Received':
     case 'DownloadingTorrentFile':
-    case 'DownloadTorrentFileFailed':
-    case 'DownloadedTorrentFile':
-    case 'AddedTorrent':
-    case 'StartedTorrent':
-    case 'InitializingTorrent':
+    case 'AddingTorrent':
+    case 'MappingFiles':
+    case 'LoadingFastResume':
+    case 'StartingTorrent':
+    case 'LoadingMetadata':
       return { variant: 'query', color: 'primary' };
-    case 'DownloadingTorrent':
+    case 'DownloadingFiles':
       return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent };
-    case 'PausedTorrent':
+    case 'DownloadPaused':
       return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent, color: 'warning' };
-    case 'DownloadedTorrent':
-      return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent, color: 'success' };
     case 'StoppingTorrent':
       return { variant: 'indeterminate', color: 'success' };
-    case 'DownloadedTorrent':
-      return { variant: 'buffer', value: download.partialProgressPercent, valueBuffer: download.targetProgressPercent, color: 'success' };
-    case 'DownloadTorrentFailed':
-      return { variant: 'indeterminate', color: 'error' };
-    case 'SortingFiles':
-      return { variant: 'indeterminate', color: 'success' };
-    case 'ManualSortingRequired':
-      return { variant: 'query', color: 'warning' };
-    case 'Removing':
-      return { variant: 'indeterminate', color: 'error' };
     case 'Completed':
       return { variant: 'buffer', value: 100, valueBuffer: 100, color: 'success' };
+    case 'Deleting':
+      return { variant: 'indeterminate', color: 'error' };
+    case 'Failed':
+      return { variant: 'query', color: 'error' };
     default:
-      return {
-        variant: 'indeterminate',
-      };
+      return { variant: 'indeterminate' };
   }
-};
-
-function leftPad(str: string, length: number, padChar: string): string {
-  while (str.length < length) {
-    str = padChar + str;
-  }
-  return str;
 };

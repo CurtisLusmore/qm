@@ -20,8 +20,6 @@ export default function Series({ id }: { id: string }) {
   const [ title, setTitle ] = useState<Series | undefined>(undefined);
   const [ episodesLoaded, setEpisodesLoaded ] = useState(false);
 
-  console.log(title);
-
   useEffect(() => {
     (async function () {
       let title = collection.get(id!) as Series | undefined;

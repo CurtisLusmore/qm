@@ -1,12 +1,21 @@
-import type { Movie, Series, ServerCollection } from '../types';
+import type { Movie, Series } from '../types';
 
-export async function getServerCollection(): Promise<ServerCollection> {
-  const response = await fetch(`/api/collection`);
+export async function getServerMovies(since?: Date): Promise<Movie[]> {
+  const response = await fetch(`/api/movies${since ? `?since=${since.toISOString()}` : ''}`);
   if (!response.ok) {
     throw new Error(`Collection request failed with status ${response.status}`);
   }
-  const collection = await response.json() as ServerCollection;
-  return collection;
+  const movies = await response.json() as Movie[];
+  return movies;
+};
+
+export async function getServerSeries(since?: Date): Promise<Series[]> {
+  const response = await fetch(`/api/series${since ? `?since=${since.toISOString()}` : ''}`);
+  if (!response.ok) {
+    throw new Error(`Collection request failed with status ${response.status}`);
+  }
+  const series = await response.json() as Series[];
+  return series;
 };
 
 export async function addMovieToServerCollection(title: Movie): Promise<void> {

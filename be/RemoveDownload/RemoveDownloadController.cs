@@ -5,13 +5,13 @@ namespace be.RemoveDownload;
 public class RemoveDownloadController(RemoveDownloadService service) : ControllerBase
 {
     [HttpDelete("api/downloads/{infoHash}")]
-    public IActionResult RemoveDownload([FromRoute] string infoHash)
+    public async Task<IActionResult> RemoveDownloadAsync([FromRoute] string infoHash)
     {
         try
         {
-            var result = service.RemoveDownload(infoHash);
+            var result = await service.RemoveDownloadAsync(infoHash);
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Value)
+                ? StatusCode(result.StatusCode)
                 : StatusCode(result.StatusCode, result.Error);
         }
         catch (Exception ex)

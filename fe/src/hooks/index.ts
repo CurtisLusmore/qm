@@ -4,4 +4,5 @@ export { default as useCollection } from './useCollection';
 export { default as useDebounced } from './useDebounced';
 export { default as useDispatchToast } from './useDispatchToast';
 export { default as useDownloads } from './useDownloads';
+export { default as useServerEventHandlerRegistration } from './useServerEventHandlerRegistration';
 export { default as useWakeLock } from './useWakeLock';

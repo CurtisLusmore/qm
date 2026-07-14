@@ -12,7 +12,7 @@ public class RemoveTitleController(RemoveTitleService service) : ControllerBase
         {
             var result = await service.RemoveMovieAsync(titleId);
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Value)
+                ? StatusCode(result.StatusCode)
                 : StatusCode(result.StatusCode, result.Error);
         }
         catch (Exception ex)
@@ -28,7 +28,7 @@ public class RemoveTitleController(RemoveTitleService service) : ControllerBase
         {
             var result = await service.RemoveSeriesAsync(titleId);
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Value)
+                ? StatusCode(result.StatusCode)
                 : StatusCode(result.StatusCode, result.Error);
         }
         catch (Exception ex)

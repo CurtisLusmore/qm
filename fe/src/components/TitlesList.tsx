@@ -96,7 +96,7 @@ function TitleItem({ item, remove, navigate }: {
   navigate: (titleId: string) => void,
 }): React.ReactElement {
   const title = item.year ? `${item.name} (${item.year})` : item.name;
-  const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
+  const subtitle = item.type === 'Movie' ? 'Movie' : item.type === 'Series' ? 'TV Series' : 'Episode';
 
   function handleClickTitle(ev: React.MouseEvent) {
     ev.stopPropagation();

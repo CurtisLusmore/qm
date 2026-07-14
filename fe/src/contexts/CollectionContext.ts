@@ -1,21 +1,21 @@
-import { createContext, useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useReducer } from 'react';
 import type { KeyValueStore } from '@fifteenthstandard/storage';
-import type {
-  Collection,
-  Movie,
-  Series,
-  ServerCollection,
-  Title,
-  TitleSummary,
-} from '../types';
 import {
   addMovieToServerCollection,
   addSeriesToServerCollection,
-  getServerCollection,
+  getServerMovies,
+  getServerSeries,
   KeyValueStorePromise,
   removeMovieFromServerCollection,
   removeSeriesFromServerCollection,
 } from '../clients';
+import type {
+  Collection,
+  Movie,
+  Series,
+  Title,
+  TitleSummary,
+} from '../types';
 
 export const CollectionContext = createContext<Collection>({} as Collection);
 
@@ -78,13 +78,13 @@ function initialize(state: State, store: KeyValueStore | undefined, movies: Movi
 
 function addTitle(state: State, title: Title): State {
   switch (title.type) {
-    case 'movie':
+    case 'Movie':
       return {
         ...state,
         movies: sorted([...state.movies, title as Movie]),
       };
 
-    case 'series':
+    case 'Series':
       return {
         ...state,
         series: sorted([...state.series, title as Series]),
@@ -115,13 +115,13 @@ function removeTitle(state: State, titleId: string): State {
 
 function update(state: State, title: Title): State {
   switch (title.type) {
-    case 'movie':
+    case 'Movie':
       return {
         ...state,
         movies: sorted([...state.movies, title as Movie]),
       };
 
-    case 'series':
+    case 'Series':
       return {
         ...state,
         series: sorted([...state.series, title as Series]),
@@ -161,26 +161,27 @@ function reduce(state: State, action: Action): State {
 
 export function createCollectionContext(): Collection {
   const [ state, dispatch ] = useReducer(reduce, initialState);
-  const [ serverState, setServerState ] = useState<ServerCollection>({ movies: [] as Movie[], series: [] as Series[] });
 
   useEffect(() => {
+    if (!state.store) return;
     (async function () {
-      const collection = await getServerCollection();
-      setServerState(collection);
+      const { addedSince } = await state.store!.get<{ addedSince: Date | undefined }>('metadata', 'addedSince') || { addedSince: undefined };
+      const [ movies, series ] = await Promise.all([
+        getServerMovies(addedSince),
+        getServerSeries(addedSince),
+      ]);
+      let latestedAddedOn: string | undefined;
+      for (const title of [ ...movies, ...series ]) {
+        if (!latestedAddedOn || (title.addedOn && title.addedOn > latestedAddedOn)) {
+          latestedAddedOn = title.addedOn;
+        }
+        await updateFromServer(title);
+      }
+      if (latestedAddedOn) {
+        await state.store!.put('metadata', 'addedSince', { addedSince: new Date(latestedAddedOn) });
+      }
     }());
-  }, []);
-
-  useEffect(() => {
-    for (const movie of serverState.movies) {
-      updateFromServer(movie);
-    }
-  }, [ serverState.movies ]);
-
-  useEffect(() => {
-    for (const series of serverState.series) {
-      updateFromServer(series);
-    }
-  }, [ serverState.series ]);
+  }, [ state.store ]);
 
   useEffect(() => {
     (async function initialize() {
@@ -194,8 +195,8 @@ export function createCollectionContext(): Collection {
   }, []);
 
   const recentlyAdded = useMemo(() => [ ...state.movies, ...state.series ]
-    .filter(item => item.addedOn !== undefined)
-    .toSorted((a, b) => b.addedOn!.getTime() - a.addedOn!.getTime())
+    .filter(item => item.addedOn)
+    .toSorted((a, b) => b.addedOn!.localeCompare(a.addedOn!))
     .slice(0, 10), [ state.movies, state.series ]);
 
   function get(titleId: string): Title | undefined {
@@ -210,13 +211,13 @@ export function createCollectionContext(): Collection {
     const collectionItem: Title = {
       ...title,
       inCollection: true,
-      addedOn: new Date(),
+      addedOn: new Date().toISOString(),
       watched: false,
       lastWatched: undefined,
       downloaded: false,
     };
     await state.store!.put(title.type, title.id, collectionItem);
-    await (title.type === 'movie'
+    await (title.type === 'Movie'
       ? addMovieToServerCollection(title as Movie)
       : addSeriesToServerCollection(title as Series)
     );
@@ -226,7 +227,7 @@ export function createCollectionContext(): Collection {
   async function updateFromServer(title: Title): Promise<void> {
     title = {
       inCollection: true,
-      addedOn: new Date(),
+      addedOn: new Date().toISOString(),
       watched: false,
       lastWatched: undefined,
       downloaded: false,
@@ -237,10 +238,11 @@ export function createCollectionContext(): Collection {
   };
 
   async function remove(titleId: string): Promise<void> {
+    console.log(`Removing title with ID: ${titleId}`);
     const title = get(titleId);
     if (title) {
       await state.store!.remove(title.type, titleId);
-      await (title.type === 'movie'
+      await (title.type === 'Movie'
         ? removeMovieFromServerCollection(titleId)
         : removeSeriesFromServerCollection(titleId)
     );
@@ -254,7 +256,7 @@ export function createCollectionContext(): Collection {
     const title = {
       ...existing,
       watched: true,
-      lastWatched: new Date(),
+      lastWatched: new Date().toISOString(),
     };
     dispatch({ type: 'update', title });
     await state.store!.put(title.type, titleId, title);

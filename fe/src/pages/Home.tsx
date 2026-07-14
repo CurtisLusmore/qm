@@ -165,7 +165,7 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
 }) {
   const [ loading, setLoading ] = useState(false);
   const title = item.year ? `${item.name} (${item.year})` : item.name;
-  const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
+  const subtitle = item.type === 'Movie' ? 'Movie' : item.type === 'Series' ? 'TV Series' : 'Episode';
 
   function handleMouseEnter() {
     getTitle(item.id).catch(() => {});
@@ -174,10 +174,10 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
   function handleClickTitle(ev: React.MouseEvent) {
     ev.stopPropagation();
     switch (item.type) {
-      case 'movie':
+      case 'Movie':
         navigate(`/movies?id=${item.id}`);
         break;
-      case 'series':
+      case 'Series':
         navigate(`/series?id=${item.id}`);
         break;
     }
@@ -247,15 +247,15 @@ function SearchResultItem({ item, add, remove, getTitle, navigate }: {
 
 function TitleItem({ item, navigate }: { item: Title, navigate: (path: string) => void }): React.ReactElement {
   const title = item.year ? `${item.name} (${item.year})` : item.name;
-  const subtitle = item.type === 'movie' ? 'Movie' : item.type === 'series' ? 'TV Series' : 'Episode';
+  const subtitle = item.type === 'Movie' ? 'Movie' : item.type === 'Series' ? 'TV Series' : 'Episode';
 
   function handleClickTitle(ev: React.MouseEvent) {
     ev.stopPropagation();
     switch (item.type) {
-      case 'movie':
+      case 'Movie':
         navigate(`/movies?id=${item.id}`);
         break;
-      case 'series':
+      case 'Series':
         navigate(`/series?id=${item.id}`);
         break;
     }

@@ -36,10 +36,10 @@ function mapSearchResults(results: SearchResults): TitleSummary[] {
     switch (qid) {
       case 'movie':
       case 'tvMovie':
-        return 'movie';
+        return 'Movie';
       case 'tvMiniSeries':
       case 'tvSeries':
-        return 'series';
+        return 'Series';
       default:
         throw new Error(`Unknown qid: ${qid}`);
     }

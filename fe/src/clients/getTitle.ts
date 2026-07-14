@@ -68,7 +68,7 @@ function mapTitleResultToEpisode(result: TitleResult): Episode {
     year: result.releaseYear?.year,
     endYear: result.releaseYear?.endYear,
     releaseDate: result.releaseDate && new Date(result.releaseDate.year, result.releaseDate.month - 1, result.releaseDate.day),
-    type: 'episode',
+    type: 'Episode',
     seasonNumber: result.series?.episodeNumber ? result.series.episodeNumber.seasonNumber : 0,
     episodeNumber: result.series?.episodeNumber ? result.series.episodeNumber.episodeNumber : 0,
     runtimeSeconds: result.runtime?.seconds,
@@ -95,7 +95,7 @@ function mapTitleResultToEpisode(result: TitleResult): Episode {
 function mapTitleResultToMovie(result: TitleResult): Movie {
   return {
     id: result.id,
-    type: 'movie',
+    type: 'Movie',
     name: result.titleText.text,
     plot: result.plot?.plotText.plainText ?? '',
     genres: result.genres.genres.map(genre => genre.text),
@@ -128,7 +128,7 @@ function mapTitleResultToMovie(result: TitleResult): Movie {
 function mapTitleResultToSeries(result: TitleResult): Series {
   return {
     id: result.id,
-    type: 'series',
+    type: 'Series',
     name: result.titleText.text,
     plot: result.plot?.plotText.plainText ?? '',
     genres: result.genres.genres.map(genre => genre.text),

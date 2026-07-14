@@ -6,11 +6,11 @@ namespace be.Search;
 public class SearchController(SearchService service) : ControllerBase
 {
     [HttpGet("api/search")]
-    public async Task<IActionResult> SearchAsync([FromQuery] string query)
+    public async Task<IActionResult> SearchAsync([FromQuery] string query, CancellationToken cancellationToken)
     {
         try
         {
-            var results = await service.SearchAsync(query);
+            var results = await service.SearchAsync(query, cancellationToken);
             return results.IsSuccess
                 ? StatusCode(results.StatusCode, results.Value)
                 : StatusCode(results.StatusCode, results.Error);

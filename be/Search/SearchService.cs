@@ -1,4 +1,5 @@
-using be.Shared;
+using System.Net;
+using be.Models;
 
 namespace be.Search;
 
@@ -8,19 +9,19 @@ public class SearchService(
 {
     const string BaseUrl = "https://apibay.org/q.php?q=";
 
-    public async Task<Result<IEnumerable<SearchResult>>> SearchAsync(string query)
+    public async Task<Result<IEnumerable<SearchResult>>> SearchAsync(string query, CancellationToken cancellationToken)
     {
         using var client = httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; SearchService/1.0)");
         Response[]? response;
         try
         {
-            response = await client.GetFromJsonAsync<Response[]>($"{BaseUrl}{Uri.EscapeDataString(query)}");
+            response = await client.GetFromJsonAsync<Response[]>($"{BaseUrl}{Uri.EscapeDataString(query)}", cancellationToken);
         }
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "Error searching for query: {Query}", query);
-            return Result<IEnumerable<SearchResult>>.Failure(ex.Message, (int?)ex.StatusCode ?? 500);
+            return Result<IEnumerable<SearchResult>>.Failure(ex.Message, ex.StatusCode ?? HttpStatusCode.InternalServerError);
         }
         catch (Exception ex)
         {

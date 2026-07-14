@@ -41,7 +41,7 @@ function TitleCardInner({ children, title, addToCollection, markWatched }: {
   markWatched: (titleId: string) => void
 }): React.ReactElement {
   const [ downloadSearchOpen, setDownloadSearchOpen ] = useState(false);
-  const lastWatched = title.watched && title.lastWatched ? getRelativeDateText(title.lastWatched) : null;
+  const lastWatched = title.watched && title.lastWatched ? getRelativeDateText(new Date(title.lastWatched)) : null;
   const subheaders = [
     title.year,
     title.runtimeSeconds !== undefined ? `${Math.floor(title.runtimeSeconds / 60)} min` : null,

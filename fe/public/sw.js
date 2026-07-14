@@ -21,6 +21,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.includes(SCOPE)) return;
+  if (event.request.url.startsWith(self.location.origin + SCOPE + 'api')) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

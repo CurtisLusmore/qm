@@ -49,7 +49,6 @@ export default function DownloadSearch({ title, open, onClose }: {
   async function handleClickDownload(infoHash: string): Promise<void> {
     try {
       await startDownload(infoHash, title);
-      dispatchToast('Download started successfully', 'success');
       handleClose();
     } catch (error) {
       console.error(error);

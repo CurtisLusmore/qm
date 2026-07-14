@@ -13,9 +13,9 @@ export interface Collection {
 
 export type CollectionStatus = {
   inCollection?: boolean;
-  addedOn?: Date;
+  addedOn?: string;
   watched?: boolean;
-  lastWatched?: Date;
+  lastWatched?: string;
   downloaded?: boolean;
 }
 
@@ -27,6 +27,7 @@ export type DownloadSearchResult = {
 }
 
 export type DownloadTracker = {
+  name: string;
   infoHash: string;
   title: Title;
   status: DownloadTrackerStatus;
@@ -42,23 +43,24 @@ export type DownloadTracker = {
   seeds: number;
 }
 
+export type DownloadPatch = {
+  status: DownloadTrackerStatus;
+}
+
 export type DownloadTrackerStatus =
   | 'Received'
   | 'DownloadingTorrentFile'
-  | 'DownloadTorrentFileFailed'
-  | 'DownloadedTorrentFile'
-  | 'AddedTorrent'
-  | 'StartedTorrent'
-  | 'InitializingTorrent'
-  | 'DownloadingTorrent'
-  | 'PausedTorrent'
-  | 'DownloadTorrentFailed'
+  | 'AddingTorrent'
+  | 'MappingFiles'
+  | 'LoadingFastResume'
+  | 'StartingTorrent'
+  | 'LoadingMetadata'
+  | 'DownloadingFiles'
+  | 'DownloadPaused'
   | 'StoppingTorrent'
-  | 'DownloadedTorrent'
-  | 'SortingFiles'
-  | 'ManualSortingRequired'
   | 'Completed'
-  | 'Removing';
+  | 'Deleting'
+  | 'Failed';
 
 export type Episode = Title & {
   seasonNumber: number;
@@ -85,15 +87,10 @@ export type Series = Title & {
   episodes: Episode[];
 }
 
-export interface ServerCollection {
-  movies: Movie[];
-  series: Series[];
-}
-
 export type TitleType =
-  | 'movie'
-  | 'series'
-  | 'episode';
+  | 'Movie'
+  | 'Series'
+  | 'Episode';
 
 export type TitleSummary = {
   id: string;
@@ -108,9 +105,52 @@ export type PersonSummary = {
   name: string;
 }
 
-export type ServerEvent = {
-  downloads: DownloadTracker[];
+export type DownloadAddedEvent = {
+  type: 'DownloadAdded';
+  download: DownloadTracker;
 }
+
+export type DownloadProgressEvent = {
+  type: 'DownloadProgress';
+  download: DownloadTracker;
+}
+
+export type DownloadCompletedEvent = {
+  type: 'DownloadCompleted';
+  download: DownloadTracker;
+}
+
+export type DownloadRemoved = {
+  type: 'DownloadRemoved';
+  infoHash: string;
+}
+
+export type DownloadFailedEvent = {
+  type: 'DownloadFailed';
+  download: DownloadTracker;
+}
+
+export type MovieAddedEvent = {
+  type: 'MovieAdded';
+  movie: Movie;
+}
+
+export type SeriesAddedEvent = {
+  type: 'SeriesAdded';
+  series: Series;
+}
+
+export type ServerEvent =
+  | DownloadAddedEvent
+  | DownloadProgressEvent
+  | DownloadCompletedEvent
+  | DownloadRemoved
+  | DownloadFailedEvent
+  | MovieAddedEvent
+  | SeriesAddedEvent;
+
+export type ServerEventHandler = (event: ServerEvent) => void;
+export type ServerEventHandlerRegistration = (listener: ServerEventHandler) => (() => void);
 
 export type Title = TitleSummary & CollectionStatus & {
   endYear?: number;

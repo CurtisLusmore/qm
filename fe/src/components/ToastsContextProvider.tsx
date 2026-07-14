@@ -12,7 +12,7 @@ export default function ToastsContextProvider({ children }: { children: React.Re
         ? <Snackbar
             key={toast.id}
             open
-            // autoHideDuration={5000}
+            autoHideDuration={5000}
             onClose={() => dismissToast(toast.id)}
           >
             <Alert

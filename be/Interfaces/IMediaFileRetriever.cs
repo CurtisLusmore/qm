@@ -1,4 +1,4 @@
-using be.Shared;
+using be.Models;
 
 namespace be.Interfaces;
 

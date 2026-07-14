@@ -17,6 +17,7 @@ import {
   DownloadsContextProvider,
   DownloadTracker,
   NavigationTabs,
+  ServerEventsContextProvider,
   ThemeSwitcher,
   ToastsContextProvider,
 } from './components';
@@ -26,7 +27,11 @@ import {
   Playlist,
   Series,
 } from './pages';
-import { createCollectionContext, createDownloadsContext } from './contexts';
+import {
+  createCollectionContext,
+  createDownloadsContext,
+  createServerEventsContext,
+} from './contexts';
 
 const lightTheme = createTheme({
   palette: {
@@ -73,23 +78,27 @@ const router = createBrowserRouter([
 
 function RootLayout(): React.ReactElement {
   const [ theme, setTheme ] = useState<'light' | 'dark'>('dark');
+  const registration = createServerEventsContext();
   const collection = createCollectionContext();
+  const downloads = createDownloadsContext(registration);
   return (
     <ThemeProvider theme={theme === 'light' ? lightTheme : darkTheme}>
-      <CollectionContextProvider value={collection}>
-        <ToastsContextProvider>
-          <CssBaseline />
-          <NavigationTabs />
-          <ThemeSwitcher theme={theme} setTheme={setTheme} />
-          <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
-            { collection.loaded && <Outlet /> }
-            <ScrollRestoration />
-          </Container>
-          <DownloadsContextProvider value={createDownloadsContext()}>
-            <DownloadTracker />
+      <ToastsContextProvider>
+        <ServerEventsContextProvider value={registration}>
+          <DownloadsContextProvider value={downloads}>
+            <CollectionContextProvider value={collection}>
+              <CssBaseline />
+              <NavigationTabs />
+              <ThemeSwitcher theme={theme} setTheme={setTheme} />
+              <Container maxWidth="md" sx={{ position: 'relative', minHeight: '100vh' }}>
+                { collection.loaded && <Outlet /> }
+                <ScrollRestoration />
+              </Container>
+              <DownloadTracker />
+            </CollectionContextProvider>
           </DownloadsContextProvider>
-        </ToastsContextProvider>
-      </CollectionContextProvider>
+        </ServerEventsContextProvider>
+      </ToastsContextProvider>
     </ThemeProvider>
   );
 };

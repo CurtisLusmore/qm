@@ -1,20 +1,21 @@
+using System.Net;
 using be.Interfaces;
-using be.Shared;
+using be.Models;
 
 namespace be.RemoveDownload;
 
 public class RemoveDownloadService(IDownloadRemover downloadRemover)
 {
-    public Result<int> RemoveDownload(string infoHash)
+    public async Task<Result> RemoveDownloadAsync(string infoHash)
     {
         try
         {
-            downloadRemover.RequestRemoveDownload(infoHash);
+            await downloadRemover.RequestRemoveDownloadAsync(infoHash);
         }
         catch (Exception ex)
         {
-            return Result<int>.Failure($"Failed to remove download: {ex.Message}");
+            return Result.Failure($"Failed to remove download: {ex.Message}");
         }
-        return Result<int>.Success(0);
+        return Result.Success(HttpStatusCode.Accepted);
     }
 }

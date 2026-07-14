@@ -1,16 +1,19 @@
 using be.Interfaces;
+using be.Models;
 using System.Runtime.CompilerServices;
 
 namespace be.Subscribe;
 
-public class SubscribeService(IDownloadLister downloadLister)
+public class SubscribeService(IEventStream eventStream)
 {
     public async IAsyncEnumerable<Event> Subscribe([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            yield return new Event([.. downloadLister]);
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            await foreach (var @event in eventStream.Subscribe(cancellationToken))
+            {
+                yield return @event;
+            }
         }
     }
 }

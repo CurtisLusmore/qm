@@ -1,11 +1,12 @@
+using System.Net;
 using be.Interfaces;
-using be.Shared;
+using be.Models;
 
 namespace be.RemoveTitle;
 
 public class RemoveTitleService(ITitleRemover titleRemover)
 {
-    public async Task<Result<int>> RemoveMovieAsync(string titleId)
+    public async Task<Result> RemoveMovieAsync(string titleId)
     {
         try
         {
@@ -13,12 +14,12 @@ public class RemoveTitleService(ITitleRemover titleRemover)
         }
         catch (Exception ex)
         {
-            return Result<int>.Failure($"Failed to remove movie: {ex.Message}");
+            return Result.Failure($"Failed to remove movie: {ex.Message}");
         }
-        return Result<int>.Success(0);
+        return Result.Success(HttpStatusCode.Accepted);
     }
 
-    public async Task<Result<int>> RemoveSeriesAsync(string titleId)
+    public async Task<Result> RemoveSeriesAsync(string titleId)
     {
         try
         {
@@ -26,8 +27,8 @@ public class RemoveTitleService(ITitleRemover titleRemover)
         }
         catch (Exception ex)
         {
-            return Result<int>.Failure($"Failed to remove series: {ex.Message}");
+            return Result.Failure($"Failed to remove series: {ex.Message}");
         }
-        return Result<int>.Success(0);
+        return Result.Success(HttpStatusCode.Accepted);
     }
 }
